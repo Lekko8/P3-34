@@ -6,6 +6,7 @@
     <kind value="PACKAGE" />
     <package value="P3-34" />
     <directory value="$PROJECT_DIR$" />
+    <output_directory value="$PROJECT_DIR$" />
     <auto_managed_config_id value="$PROJECT_DIR$" />
     <method v="2" />
   </configuration>
