@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="GoProfileHistory">
+    <profile entry="C:\Users\Lekko\GoLandProfiles\P3-34-goroutine-2026-07-23-154032-194.pprof">
+      <GoProfileMapEntry>
+        <option name="buildAnchorMillis" value="1784810418201" />
+        <option name="file" value="P3-34-goroutine-2026-07-23-154032-194.pprof" />
+        <option name="ours" value="true" />
+        <option name="profileType" value="GOROUTINE" />
+      </GoProfileMapEntry>
+    </profile>
+  </component>
+</project>

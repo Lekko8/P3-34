@@ -9,42 +9,80 @@ import (
 )
 
 func GUI() {
-
 	var (
-		inputData    *walk.LineEdit
-		inputCount   *walk.LineEdit
-		inputLong    *walk.LineEdit
-		statusFiles  *walk.TextEdit
-		statusSearch *walk.Label
-		statusLabel  *walk.Label
-		mw           *walk.MainWindow
+		inputWay    *walk.LineEdit
+		inputCount  *walk.LineEdit
+		inputLong   *walk.LineEdit
+		inputName   *walk.LineEdit
+		inputOrder  *walk.LineEdit
+		statusFiles *walk.TextEdit
+		statusLabel *walk.Label
+		progressBar *walk.ProgressBar
+		initButton  *walk.PushButton
+		mw          *walk.MainWindow
 	)
 
+	var runner *MeasRun
 	appIcon, _ := walk.NewIconFromResourceId(2)
 
 	mainWindow := MainWindow{
 		AssignTo: &mw,
 		Title:    "P3-34",
 		Icon:     appIcon,
-		Size:     Size{Width: 350, Height: 400},
+		Size:     Size{Width: 500, Height: 600},
 		Layout:   VBox{},
 		Children: []Widget{
 
 			HSplitter{
 				Children: []Widget{
 
-					Label{Text: "Количество циклов:"},
-					LineEdit{AssignTo: &inputCount, Text: "6", MaxSize: Size{Width: 60, Height: 0}},
-					HSpacer{},
+					HSplitter{
+						Children: []Widget{
+
+							Label{Text: "Количество циклов:"},
+							LineEdit{
+								AssignTo: &inputCount,
+								MinSize:  Size{Width: 30, Height: 0},
+								Text:     "30",
+							},
+							Label{Text: "Длительность цикла (мин):"},
+							LineEdit{
+								AssignTo: &inputLong,
+								MinSize:  Size{Width: 30, Height: 0},
+								Text:     "2",
+							},
+						},
+					},
+				},
+			},
+			// Путь сохранения
+			HSplitter{
+				Children: []Widget{
+
+					Label{Text: "Сохранять в:"},
+					LineEdit{
+						AssignTo: &inputWay,
+						MaxSize:  Size{Width: 400, Height: 0},
+						Text:     filesFolder,
+					},
 				},
 			},
 
 			HSplitter{
 				Children: []Widget{
 
-					Label{Text: "Длительность цикла:"},
-					LineEdit{AssignTo: &inputLong, Text: "10", MaxSize: Size{Width: 15, Height: 0}},
-					HSpacer{},
+					Label{Text: "Имя текущего бразца:"},
+					LineEdit{
+						AssignTo: &inputName,
+						MaxSize:  Size{Width: 50, Height: 0},
+						Text:     "И",
+					},
+					Label{Text: "Номер заказа:"},
+					LineEdit{
+						AssignTo: &inputOrder,
+						MaxSize:  Size{Width: 150, Height: 0},
+						//Text:     "000z",
+					},
 				},
 			},
 
@@ -52,48 +90,73 @@ func GUI() {
 				Children: []Widget{
 
 					PushButton{
-						Text: "Повторить поиск",
+						Text:     "Начать измерение",
+						MaxSize:  Size{Width: 150, Height: 0},
+						AssignTo: &initButton,
 						OnClicked: func() {
-							countOfFiles = 0
 
-							filesFolder = inputData.Text()
+							filesFolder = inputWay.Text()
 
-							err := statusLabel.SetText("Прочитаны файлы из " + filesFolder)
-							if err != nil {
-								log.Panic(err.Error())
+							if runner == nil {
+								runner = NewMeasRun(
+									statusLabel, statusFiles,
+									progressBar, initButton, mw)
 							}
 
-							//err = statusFiles.SetText(readFileList(filesFolder))
-							//if err != nil {
-							//	log.Panic(err.Error())
-							//}
-
-							err = statusSearch.SetText("Найденные файлы: " + strconv.Itoa(countOfFiles))
-							if err != nil {
-								log.Panic(err.Error())
+							if runner.isWorking {
+								runner.Stop("Измерение прервано")
+								return
 							}
+
+							totalCycles, err := strconv.Atoi(inputCount.Text())
+							if err != nil {
+								log.Print(err.Error())
+								return
+							}
+
+							cycleMinutes, err := strconv.Atoi(inputLong.Text())
+							if err != nil {
+								log.Print(err.Error())
+								return
+							}
+
+							runner.Run(totalCycles, cycleMinutes)
 						},
 					},
 
 					PushButton{
-						Text: "Создать .xlsx",
+						Text:    "Собрать .xlsx за сегодня",
+						MaxSize: Size{Width: 150, Height: 0},
 						OnClicked: func() {
-							//err := statusLabel.SetText("Файл " + createFile() + " успешно создан")
-							//if err != nil {
-							//	log.Panic(err.Error())
-							//}
+							filesFolder = inputWay.Text()
+							err := statusLabel.SetText(
+								"Записано в " + createFile(filesFolder))
+							if err != nil {
+								log.Print(err.Error())
+							}
 						},
 					},
 				},
 			},
 
-			Label{Text: "Сохранять в:"},
-			LineEdit{AssignTo: &inputData, Text: filesFolder},
+			HSplitter{
+				Children: []Widget{
 
-			Label{AssignTo: &statusSearch, Text: "Найденные файлы:"},
+					//HSpacer{},
+					Label{AssignTo: &statusLabel, Text: "Готов к работе"},
+					//HSpacer{},
+					ProgressBar{
+						AssignTo: &progressBar,
+						MinValue: 0,
+						MaxValue: 100,
+						Value:    0,
+						MinSize:  Size{Width: 50, Height: 10},
+						MaxSize:  Size{Width: 400, Height: 10},
+					},
+				},
+			},
+
 			TextEdit{AssignTo: &statusFiles, ReadOnly: true, VScroll: true},
-
-			Label{AssignTo: &statusLabel, Text: "Лёша лох"},
 		},
 	}
 
@@ -101,15 +164,5 @@ func GUI() {
 		log.Fatal(err)
 	}
 
-	err := statusLabel.SetText("Прочитаны файлы из " + filesFolder) //запуск поиска на старте
-	if err != nil {
-		log.Panic(err.Error())
-	}
-	//err = statusFiles.SetText(readFileList(filesFolder))
-	//if err != nil {
-	//	log.Panic(err.Error())
-	//}
-
 	mw.Run()
-
 }
