@@ -43,7 +43,7 @@ func NewMeasRun(
 	}
 }
 
-// Stop Единый метод для остановки
+// Stop останавливает измерение
 func (r *MeasRun) Stop(message string) {
 	r.mu.Lock()
 
@@ -69,7 +69,7 @@ func (r *MeasRun) Stop(message string) {
 	})
 }
 
-// UpdateStatus Единый метод для обновления статуса
+// UpdateStatus обновляет статус
 func (r *MeasRun) UpdateStatus(message string) {
 	r.mw.Synchronize(func() {
 		err := r.statusLabel.SetText(message)
@@ -79,7 +79,7 @@ func (r *MeasRun) UpdateStatus(message string) {
 	})
 }
 
-// UpdateCycle Единый метод для обновления цикла
+// UpdateCycle сменяет цикл
 func (r *MeasRun) UpdateCycle(current, total int) {
 	r.mu.Lock()
 	r.currentCycle = current
@@ -94,6 +94,7 @@ func (r *MeasRun) UpdateCycle(current, total int) {
 	})
 }
 
+// UpdateProgress обновляет прогресс бар
 func (r *MeasRun) UpdateProgress(percent int) {
 	if percent < 0 {
 		percent = 0
@@ -113,7 +114,7 @@ func (r *MeasRun) UpdateProgress(percent int) {
 	})
 }
 
-// DoMeas Выполнение измерения с отменой
+// DoMeas выполняет измерение
 func (r *MeasRun) DoMeas() error {
 	done := make(chan struct{})
 	var result string
@@ -143,7 +144,7 @@ func (r *MeasRun) DoMeas() error {
 	}
 }
 
-// Run Запуск всех измерений
+// Run запускает измерения
 func (r *MeasRun) Run(totalCycles, cycleMinutes int) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -178,6 +179,7 @@ func (r *MeasRun) Run(totalCycles, cycleMinutes int) {
 	go r.runLoop()
 }
 
+// runLoop запускает цикл
 func (r *MeasRun) runLoop() {
 	defer r.wg.Done()
 	defer func() {
@@ -232,7 +234,7 @@ func (r *MeasRun) runLoop() {
 	})
 }
 
-// Создаёт файл для начала записи циклов
+// createFile создаёт файл для начала записи циклов
 func createFile(filesFolder string) string {
 	return "Имя файла в " + filesFolder
 }

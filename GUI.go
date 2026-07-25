@@ -15,6 +15,7 @@ func GUI() {
 		inputLong   *walk.LineEdit
 		inputName   *walk.LineEdit
 		inputOrder  *walk.LineEdit
+		inputHz     *walk.LineEdit
 		statusFiles *walk.TextEdit
 		statusLabel *walk.Label
 		progressBar *walk.ProgressBar
@@ -42,7 +43,7 @@ func GUI() {
 							Label{Text: "Количество циклов:"},
 							LineEdit{
 								AssignTo: &inputCount,
-								MinSize:  Size{Width: 30, Height: 0},
+								MinSize:  Size{Width: 50, Height: 0},
 								Text:     "30",
 							},
 							Label{Text: "Длительность цикла (мин):"},
@@ -50,6 +51,12 @@ func GUI() {
 								AssignTo: &inputLong,
 								MinSize:  Size{Width: 30, Height: 0},
 								Text:     "2",
+							},
+							Label{Text: "Частота:"},
+							LineEdit{
+								AssignTo: &inputHz,
+								MinSize:  Size{Width: 50, Height: 0},
+								Text:     "2,2",
 							},
 						},
 					},
