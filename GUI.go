@@ -127,6 +127,8 @@ func GUI() {
 								return
 							}
 
+							runner.testPingBt()
+
 							runner.Run(totalCycles, cycleMinutes)
 						},
 					},
@@ -135,8 +137,9 @@ func GUI() {
 						Text:    "Собрать .xlsx за сегодня",
 						MaxSize: Size{Width: 150, Height: 0},
 						OnClicked: func() {
+							err := statusFiles.SetText(string(getPortsList()))
 							filesFolder = inputWay.Text()
-							err := statusLabel.SetText(
+							err = statusLabel.SetText(
 								"Записано в " + createFile(filesFolder))
 							if err != nil {
 								log.Print(err.Error())

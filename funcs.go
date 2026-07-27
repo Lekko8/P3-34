@@ -234,6 +234,10 @@ func (r *MeasRun) runLoop() {
 	})
 }
 
+func (r *MeasRun) testPingBt() {
+	r.statusFiles.AppendText(getTestPing())
+}
+
 // createFile создаёт файл для начала записи циклов
 func createFile(filesFolder string) string {
 	return "Имя файла в " + filesFolder

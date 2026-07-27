@@ -1,61 +1,39 @@
 package main
 
 import (
-	"context"
-	"fmt"
 	"log"
-	"time"
+
+	"go.bug.st/serial"
 )
 
-// Запускает новый цикл измерений
-func startMeas(ctx context.Context, m int, runner *MeasRun) string {
-	s := time.Duration(m) * time.Second //TODO: заменить на минуты перед релизом
+// Открывает коннект по стандартному порту
+func bt() serial.Port {
 
-	ticker := time.NewTicker(500 * time.Millisecond)
-	defer ticker.Stop()
+	mode := &serial.Mode{
+		BaudRate: 9600,
+	}
 
-	start := time.Now()
-	var currentValue string
-
-	for {
-		select {
-		case <-ctx.Done():
-			return "Измерение прервано"
-
-		case <-ticker.C:
-			elapsed := time.Since(start)
-
-			progress := int((elapsed.Seconds() / s.Seconds()) * 100)
-			if progress > 100 {
-				progress = 100
-			}
-			runner.UpdateProgress(progress)
-			if elapsed >= s {
-				currentValue = getCurrentValue()
-				runner.UpdateProgress(100)
-				return currentValue
-			}
-			if progress%10 == 0 {
-				runner.mw.Synchronize(func() {
-					err := runner.statusLabel.
-						SetText(
-							fmt.Sprintf("Текущий цикл: %d/%d",
-								runner.currentCycle, runner.totalCycles))
-					if err != nil {
-						log.Print(err.Error())
-					}
-				})
-			}
+	port, err := serial.Open("COM4", mode)
+	if err != nil {
+		log.Print(err)
+		err = port.Close()
+		if err != nil {
+			log.Print(err.Error())
 		}
 	}
+
+	return port
 }
 
-// Запрашивает текущее значение
-func getCurrentValue() string {
-	return "\n" + "Текущее значение"
-}
-
-// Запрашивает метаданные
-func getMetaData() string {
-	return "Мета данные" + "\r\n"
+func getPortsList() int {
+	ports, err := serial.GetPortsList()
+	if err != nil {
+		log.Print(err)
+	}
+	if len(ports) != 0 {
+		for _, port := range ports {
+			log.Println(port)
+		}
+	}
+	return len(ports)
 }
