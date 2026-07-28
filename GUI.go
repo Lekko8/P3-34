@@ -3,6 +3,7 @@ package main
 import (
 	"log"
 	"strconv"
+	"time"
 
 	"github.com/lxn/walk"
 	. "github.com/lxn/walk/declarative"
@@ -21,9 +22,9 @@ func GUI() {
 		progressBar *walk.ProgressBar
 		initButton  *walk.PushButton
 		mw          *walk.MainWindow
+		runner      *MeasRun
 	)
 
-	var runner *MeasRun
 	appIcon, _ := walk.NewIconFromResourceId(2)
 
 	mainWindow := MainWindow{
@@ -90,6 +91,13 @@ func GUI() {
 						MaxSize:  Size{Width: 150, Height: 0},
 						//Text:     "000z",
 					},
+					PushButton{
+						Text:    "Проверить соединение",
+						MaxSize: Size{Width: 100, Height: 0},
+						OnClicked: func() {
+							connectGUI(mw, appIcon)
+						},
+					},
 				},
 			},
 
@@ -101,6 +109,7 @@ func GUI() {
 						MaxSize:  Size{Width: 150, Height: 0},
 						AssignTo: &initButton,
 						OnClicked: func() {
+							start := time.Now()
 
 							filesFolder = inputWay.Text()
 
@@ -127,9 +136,10 @@ func GUI() {
 								return
 							}
 
-							runner.testPingBt()
-
-							runner.Run(totalCycles, cycleMinutes)
+							if runner.testPingBt() {
+								runner.Run(totalCycles, cycleMinutes)
+							}
+							log.Print("Кнопка: ", time.Since(start))
 						},
 					},
 
@@ -137,9 +147,8 @@ func GUI() {
 						Text:    "Собрать .xlsx за сегодня",
 						MaxSize: Size{Width: 150, Height: 0},
 						OnClicked: func() {
-							err := statusFiles.SetText(string(getPortsList()))
 							filesFolder = inputWay.Text()
-							err = statusLabel.SetText(
+							err := statusLabel.SetText(
 								"Записано в " + createFile(filesFolder))
 							if err != nil {
 								log.Print(err.Error())
@@ -175,4 +184,44 @@ func GUI() {
 	}
 
 	mw.Run()
+}
+
+func connectGUI(owner walk.Form, appIcon *walk.Icon) {
+	var (
+		dig           *walk.Dialog
+		statusConnect *walk.TextEdit
+	)
+
+	dialog := Dialog{
+		AssignTo: &dig,
+		Title:    "Bluetooth соединение",
+		Icon:     appIcon,
+		MinSize:  Size{Width: 200, Height: 150},
+		Layout:   VBox{},
+		Children: []Widget{
+			TextEdit{
+				AssignTo: &statusConnect,
+			},
+			PushButton{
+				Text:    "Повторить проверку",
+				MaxSize: Size{Width: 100, Height: 0},
+				OnClicked: func() {
+					err := statusConnect.SetText(getPortsList())
+					if err != nil {
+						log.Print(err.Error())
+					}
+				},
+			},
+		},
+	}
+	if err := dialog.Create(owner); err != nil {
+		log.Fatal(err)
+	}
+
+	err := statusConnect.SetText(getPortsList())
+	if err != nil {
+		log.Print(err.Error())
+	}
+
+	dig.Run()
 }

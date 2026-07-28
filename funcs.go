@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"sync"
+	"time"
 
 	"github.com/lxn/walk"
 )
@@ -234,8 +235,12 @@ func (r *MeasRun) runLoop() {
 	})
 }
 
-func (r *MeasRun) testPingBt() {
-	r.statusFiles.AppendText(getTestPing())
+func (r *MeasRun) testPingBt() bool {
+	start := time.Now()
+	result, ping := getTestPing()
+	r.statusFiles.AppendText(result)
+	log.Print("testPingBt: ", time.Since(start))
+	return ping
 }
 
 // createFile создаёт файл для начала записи циклов

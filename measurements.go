@@ -25,10 +25,7 @@ func startMeas(ctx context.Context, m int, runner *MeasRun) string {
 		case <-ticker.C:
 			elapsed := time.Since(start)
 
-			progress := int((elapsed.Seconds() / s.Seconds()) * 100)
-			if progress > 100 {
-				progress = 100
-			}
+			progress := min(int((elapsed.Seconds()/s.Seconds())*100), 100)
 			runner.UpdateProgress(progress)
 			if elapsed >= s {
 				currentValue = getCurrentValue()
@@ -62,14 +59,12 @@ func getMetaData() string {
 }
 
 // Тестово пингует соединение
-func getTestPing() string {
+func getTestPing() (string, bool) {
+	start := time.Now()
 
 	if bt() == nil {
-		err := bt().Close()
-		if err != nil {
-			log.Print(err.Error())
-		}
-		return "Ошибка соединения"
+		log.Print("getTestPing ошибка: ", time.Since(start))
+		return "Ошибка соединения\r\n", false
 	}
 
 	result := make(chan []byte, 1)
@@ -94,10 +89,18 @@ func getTestPing() string {
 
 	select {
 	case data := <-result:
-		_ = bt().Close()
-		return string(data)
+		err = bt().Close()
+		if err != nil {
+			log.Print(err.Error())
+		}
+		return string(data), true
+
 	case <-time.After(2 * time.Second):
-		_ = bt().Close()
-		return "таймаут соединения"
+		err = bt().Close()
+		if err != nil {
+			log.Print(err.Error())
+		}
+		log.Print("getTestPing таймаут: ", time.Since(start))
+		return "Таймаут соединения", false
 	}
 }
