@@ -89,7 +89,6 @@ func GUI() {
 					LineEdit{
 						AssignTo: &inputOrder,
 						MaxSize:  Size{Width: 150, Height: 0},
-						//Text:     "000z",
 					},
 					PushButton{
 						Text:    "Проверить соединение",
@@ -126,13 +125,13 @@ func GUI() {
 
 							totalCycles, err := strconv.Atoi(inputCount.Text())
 							if err != nil {
-								log.Print(err.Error())
+								log.Print(err)
 								return
 							}
 
 							cycleMinutes, err := strconv.Atoi(inputLong.Text())
 							if err != nil {
-								log.Print(err.Error())
+								log.Print(err)
 								return
 							}
 
@@ -151,7 +150,7 @@ func GUI() {
 							err := statusLabel.SetText(
 								"Записано в " + createFile(filesFolder))
 							if err != nil {
-								log.Print(err.Error())
+								log.Print(err)
 							}
 						},
 					},
@@ -208,8 +207,10 @@ func connectGUI(owner walk.Form, appIcon *walk.Icon) {
 				OnClicked: func() {
 					err := statusConnect.SetText(getPortsList())
 					if err != nil {
-						log.Print(err.Error())
+						log.Print(err)
 					}
+					test, _ := getTestPing()
+					statusConnect.AppendText("\r\n" + test)
 				},
 			},
 		},
@@ -220,7 +221,7 @@ func connectGUI(owner walk.Form, appIcon *walk.Icon) {
 
 	err := statusConnect.SetText(getPortsList())
 	if err != nil {
-		log.Print(err.Error())
+		log.Print(err)
 	}
 
 	dig.Run()

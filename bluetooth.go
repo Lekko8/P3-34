@@ -10,28 +10,30 @@ import (
 
 // Открывает коннект по стандартному порту
 func bt() serial.Port {
-	start := time.Now()
+	result := make(chan serial.Port, 1)
+	go func() {
+		mode := &serial.Mode{
+			BaudRate: 9600,
+		}
 
-	mode := &serial.Mode{
-		BaudRate: 9600,
+		port, err := serial.Open("COM4", mode)
+		if err != nil {
+			log.Print(err)
+		}
+		result <- port
+	}()
+	select {
+	case port := <-result:
+		return port
+	case <-time.After(time.Millisecond * 500):
+		return nil
 	}
-
-	log.Print("bt до открытия: ", time.Since(start))
-	port, err := serial.Open("COM4", mode)
-	if err != nil {
-		log.Print("bt до ошибки: ", time.Since(start))
-		log.Print(err)
-		//err = port.Close()
-		//if err != nil {
-		//	log.Print(err.Error())
-		//}
-	}
-	log.Print("bt: ", time.Since(start))
-	return port
 }
 
 func getPortsList() string {
 	start := time.Now()
+	defer log.Print(time.Since(start))
+
 	ports, err := serial.GetPortsList()
 	if err != nil {
 		log.Print(err)
@@ -42,9 +44,8 @@ func getPortsList() string {
 			portList = portList + "\r\n" + port
 			log.Println(port)
 		}
-		log.Print(time.Since(start))
+
 		return "Портов: " + strconv.Itoa(len(ports)) + "\n\r" + portList
 	}
-	log.Print(time.Since(start))
-	return "Порты не найдены, проверьте соедение с P3-34"
+	return "Порты не найдены, проверьте соединение с P3-34"
 }

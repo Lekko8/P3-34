@@ -25,7 +25,7 @@ func startMeas(ctx context.Context, m int, runner *MeasRun) string {
 		case <-ticker.C:
 			elapsed := time.Since(start)
 
-			progress := min(int((elapsed.Seconds()/s.Seconds())*100), 100)
+			progress := max(min(int((elapsed.Seconds()/s.Seconds())*100), 100), 0)
 			runner.UpdateProgress(progress)
 			if elapsed >= s {
 				currentValue = getCurrentValue()
@@ -39,7 +39,7 @@ func startMeas(ctx context.Context, m int, runner *MeasRun) string {
 							fmt.Sprintf("Текущий цикл: %d/%d",
 								runner.currentCycle, runner.totalCycles))
 					if err != nil {
-						log.Print(err.Error())
+						log.Print(err)
 					}
 				})
 			}
@@ -58,12 +58,21 @@ func getMetaData() string {
 	return "Мета данные" + "\r\n"
 }
 
-// Тестово пингует соединение
+// Проверяет соединение
 func getTestPing() (string, bool) {
 	start := time.Now()
 
+	defer func() {
+		if bt() != nil {
+			err := bt().Close()
+			if err != nil {
+				log.Print(err)
+			}
+		}
+		log.Print("getTestPing: ", time.Since(start))
+	}()
+
 	if bt() == nil {
-		log.Print("getTestPing ошибка: ", time.Since(start))
 		return "Ошибка соединения\r\n", false
 	}
 
@@ -71,36 +80,27 @@ func getTestPing() (string, bool) {
 
 	_, err := bt().Write([]byte("TEST"))
 	if err != nil {
-		log.Print(err.Error())
+		log.Print(err)
 	}
 
 	go func() {
 
 		data := make([]byte, 1024)
-		result = make(chan []byte, 1)
+		//result = make(chan []byte, 1)
 
 		n, err := bt().Read(data)
 		if err != nil {
 			result <- []byte("Ошибка чтения")
-			log.Print(err.Error())
+			log.Print(err)
 		}
 		result <- data[:n]
 	}()
 
 	select {
 	case data := <-result:
-		err = bt().Close()
-		if err != nil {
-			log.Print(err.Error())
-		}
 		return string(data), true
 
 	case <-time.After(2 * time.Second):
-		err = bt().Close()
-		if err != nil {
-			log.Print(err.Error())
-		}
-		log.Print("getTestPing таймаут: ", time.Since(start))
 		return "Таймаут соединения", false
 	}
 }

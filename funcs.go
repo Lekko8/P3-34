@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"log"
 	"sync"
-	"time"
 
 	"github.com/lxn/walk"
 )
@@ -58,12 +57,12 @@ func (r *MeasRun) Stop(message string) {
 	r.mw.Synchronize(func() {
 		err := r.initButton.SetText("Начать измерение")
 		if err != nil {
-			log.Print(err.Error())
+			log.Print(err)
 		}
 		if message != "" {
 			err = r.statusLabel.SetText(message)
 			if err != nil {
-				log.Print(err.Error())
+				log.Print(err)
 			}
 		}
 		r.progressBar.SetValue(0)
@@ -75,7 +74,7 @@ func (r *MeasRun) UpdateStatus(message string) {
 	r.mw.Synchronize(func() {
 		err := r.statusLabel.SetText(message)
 		if err != nil {
-			log.Print(err.Error())
+			log.Print(err)
 		}
 	})
 }
@@ -89,7 +88,7 @@ func (r *MeasRun) UpdateCycle(current, total int) {
 		err := r.statusLabel.SetText(
 			fmt.Sprintf("Текущий цикл: %d/%d", current, total))
 		if err != nil {
-			log.Print(err.Error())
+			log.Print(err)
 		}
 		r.progressBar.SetValue(0)
 	})
@@ -97,12 +96,6 @@ func (r *MeasRun) UpdateCycle(current, total int) {
 
 // UpdateProgress обновляет прогресс бар
 func (r *MeasRun) UpdateProgress(percent int) {
-	if percent < 0 {
-		percent = 0
-	}
-	if percent > 100 {
-		percent = 100
-	}
 
 	r.mu.Lock()
 	r.progress = percent
@@ -169,7 +162,7 @@ func (r *MeasRun) Run(totalCycles, cycleMinutes int) {
 	r.mw.Synchronize(func() {
 		err := r.initButton.SetText("Остановить")
 		if err != nil {
-			log.Print(err.Error())
+			log.Print(err)
 		}
 		if r.statusFiles != nil {
 			r.statusFiles.AppendText(getMetaData())
@@ -191,7 +184,7 @@ func (r *MeasRun) runLoop() {
 		r.mw.Synchronize(func() {
 			err := r.initButton.SetText("Начать измерение")
 			if err != nil {
-				log.Print(err.Error())
+				log.Print(err)
 			}
 			r.progressBar.SetValue(0)
 		})
@@ -236,10 +229,8 @@ func (r *MeasRun) runLoop() {
 }
 
 func (r *MeasRun) testPingBt() bool {
-	start := time.Now()
 	result, ping := getTestPing()
 	r.statusFiles.AppendText(result)
-	log.Print("testPingBt: ", time.Since(start))
 	return ping
 }
 
