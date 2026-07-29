@@ -11,14 +11,25 @@ import (
 // Открывает коннект по стандартному порту
 func bt() serial.Port {
 	result := make(chan serial.Port, 1)
+
 	go func() {
+		defer close(result)
+
 		mode := &serial.Mode{
 			BaudRate: 9600,
 		}
 
 		port, err := serial.Open("COM4", mode)
 		if err != nil {
-			log.Print(err)
+			log.Print("Ошибка открытия порта: ", err)
+			if port != nil {
+				result <- nil
+				err = port.Close()
+				if err != nil {
+					log.Print("Ошибка закрытия порта: ", err)
+				}
+				return
+			}
 		}
 		result <- port
 	}()
@@ -30,9 +41,10 @@ func bt() serial.Port {
 	}
 }
 
+// Читает список доступных портов и отдаёт их список
 func getPortsList() string {
-	start := time.Now()
-	defer log.Print(time.Since(start))
+	//start := time.Now()
+	//defer log.Print(time.Since(start))
 
 	ports, err := serial.GetPortsList()
 	if err != nil {

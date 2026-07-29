@@ -209,8 +209,11 @@ func connectGUI(owner walk.Form, appIcon *walk.Icon) {
 					if err != nil {
 						log.Print(err)
 					}
-					test, _ := getTestPing()
-					statusConnect.AppendText("\r\n" + test)
+
+					test, ping := getTestPing()
+					if ping {
+						statusConnect.AppendText("\r\n" + test)
+					}
 				},
 			},
 		},

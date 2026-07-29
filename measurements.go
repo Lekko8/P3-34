@@ -62,36 +62,38 @@ func getMetaData() string {
 func getTestPing() (string, bool) {
 	start := time.Now()
 
+	connectBt := bt()
+
 	defer func() {
-		if bt() != nil {
-			err := bt().Close()
+		if connectBt != nil {
+			err := connectBt.Close()
 			if err != nil {
-				log.Print(err)
+				log.Print("getTestPing - connectBt.Close(): ", err)
 			}
 		}
 		log.Print("getTestPing: ", time.Since(start))
 	}()
 
-	if bt() == nil {
+	if connectBt == nil {
 		return "Ошибка соединения\r\n", false
 	}
 
 	result := make(chan []byte, 1)
 
-	_, err := bt().Write([]byte("TEST"))
+	_, err := connectBt.Write([]byte("TEST\r\n"))
 	if err != nil {
-		log.Print(err)
-	}
-
+		log.Print("connectBt.Write: ", err)
+	} //TODO: зависает на этом моменте
+	log.Print("Коннект")
 	go func() {
 
 		data := make([]byte, 1024)
 		//result = make(chan []byte, 1)
 
-		n, err := bt().Read(data)
+		n, err := connectBt.Read(data)
 		if err != nil {
 			result <- []byte("Ошибка чтения")
-			log.Print(err)
+			log.Print("Ошибка чтения: ", err)
 		}
 		result <- data[:n]
 	}()
