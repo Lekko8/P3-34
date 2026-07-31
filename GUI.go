@@ -79,7 +79,7 @@ func GUI() {
 			HSplitter{
 				Children: []Widget{
 
-					Label{Text: "Имя текущего бразца:"},
+					Label{Text: "Имя текущего образца:"},
 					LineEdit{
 						AssignTo: &inputName,
 						MaxSize:  Size{Width: 50, Height: 0},

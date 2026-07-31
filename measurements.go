@@ -80,23 +80,16 @@ func getTestPing() (string, bool) {
 
 	result := make(chan []byte, 1)
 
-	_, err := connectBt.Write([]byte("TEST\r\n"))
+	err := btWrite(connectBt, "TEST")
 	if err != nil {
-		log.Print("connectBt.Write: ", err)
-	} //TODO: зависает на этом моменте
-	log.Print("Коннект")
-	go func() {
+		log.Print("getTestPing - btWrite: ", err)
+		return "Ошибка отправки сообщения", false
+	}
 
-		data := make([]byte, 1024)
-		//result = make(chan []byte, 1)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 
-		n, err := connectBt.Read(data)
-		if err != nil {
-			result <- []byte("Ошибка чтения")
-			log.Print("Ошибка чтения: ", err)
-		}
-		result <- data[:n]
-	}()
+	go btRead(ctx, connectBt, result)
 
 	select {
 	case data := <-result:
