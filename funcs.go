@@ -166,6 +166,7 @@ func (r *MeasRun) Run(totalCycles, cycleMinutes int) {
 		}
 		if r.statusFiles != nil {
 			r.statusFiles.AppendText(getMetaData())
+			r.statusFiles.AppendText(getUBatt())
 		}
 		r.progressBar.SetValue(0)
 	})

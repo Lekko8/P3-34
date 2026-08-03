@@ -50,52 +50,67 @@ func startMeas(ctx context.Context, m int, runner *MeasRun) string {
 // Запрашивает текущее значение
 func getCurrentValue() string {
 
-	return "\n" + "Текущее значение"
+	err := btWrite("MEAS:AVR")
+	if err != nil {
+		log.Print(err)
+	}
+
+	ans, err := btRead()
+	if err != nil {
+		log.Print(err)
+	}
+
+	return "\n" + ans
 }
 
 // Запрашивает метаданные
 func getMetaData() string {
-	return "Мета данные" + "\r\n"
+
+	err := btWrite("?")
+	if err != nil {
+		log.Print(err)
+	}
+
+	ans, err := btRead()
+	if err != nil {
+		log.Print(err)
+	}
+
+	return ans + "\r\n"
+}
+
+// Запрашивает уровень батареи
+func getUBatt() string {
+
+	err := btWrite("UBATT")
+	if err != nil {
+		log.Print(err)
+	}
+
+	ans, err := btRead()
+	if err != nil {
+		log.Print(err)
+	}
+
+	return ans + "\r\n"
 }
 
 // Проверяет соединение
 func getTestPing() (string, bool) {
 	start := time.Now()
+	defer log.Print("getTestPing: ", time.Since(start))
 
-	connectBt := bt()
-
-	defer func() {
-		if connectBt != nil {
-			err := connectBt.Close()
-			if err != nil {
-				log.Print("getTestPing - connectBt.Close(): ", err)
-			}
-		}
-		log.Print("getTestPing: ", time.Since(start))
-	}()
-
-	if connectBt == nil {
-		return "Ошибка соединения\r\n", false
-	}
-
-	result := make(chan []byte, 1)
-
-	err := btWrite(connectBt, "TEST")
+	err := btWrite("TEST")
 	if err != nil {
 		log.Print("getTestPing - btWrite: ", err)
 		return "Ошибка отправки сообщения", false
 	}
 
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	go btRead(ctx, connectBt, result)
-
-	select {
-	case data := <-result:
-		return string(data), true
-
-	case <-time.After(2 * time.Second):
-		return "Таймаут соединения", false
+	answer, err := btRead()
+	if err != nil {
+		log.Print("getTestPing - btRead: ", err)
+		return "Ошибка чтения", false
 	}
+
+	return answer, true
 }

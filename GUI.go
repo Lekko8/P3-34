@@ -183,6 +183,11 @@ func GUI() {
 	}
 
 	mw.Run()
+
+	err := closePort()
+	if err != nil {
+		log.Print(err) // лол
+	}
 }
 
 func connectGUI(owner walk.Form, appIcon *walk.Icon) {
@@ -205,15 +210,20 @@ func connectGUI(owner walk.Form, appIcon *walk.Icon) {
 				Text:    "Повторить проверку",
 				MaxSize: Size{Width: 100, Height: 0},
 				OnClicked: func() {
-					err := statusConnect.SetText(getPortsList())
+
+					err := reconnectPort()
 					if err != nil {
 						log.Print(err)
 					}
 
-					test, ping := getTestPing()
-					if ping {
-						statusConnect.AppendText("\r\n" + test)
+					err = statusConnect.SetText(getPortsList())
+					if err != nil {
+						log.Print(err)
 					}
+
+					test, _ := getTestPing()
+					statusConnect.AppendText("\r\n" + test)
+
 				},
 			},
 		},
@@ -228,4 +238,64 @@ func connectGUI(owner walk.Form, appIcon *walk.Icon) {
 	}
 
 	dig.Run()
+}
+
+func errGUI(inErr error) bool {
+	var (
+		statusCon       *walk.TextEdit
+		reconnectButton *walk.PushButton
+		doneButton      *walk.PushButton
+		dlg             *walk.Dialog
+	)
+	var mainGUI = false
+
+	appIcon, _ := walk.NewIconFromResourceId(2)
+	_, err := Dialog{
+		AssignTo: &dlg,
+		Title:    "P3-34 ошибка Bluetooth",
+		Icon:     appIcon,
+		MinSize:  Size{Height: 300, Width: 400},
+		Layout:   VBox{},
+		Children: []Widget{
+			PushButton{
+				AssignTo: &reconnectButton,
+				Text:     "Переподключиться",
+				OnClicked: func() {
+
+					err := statusCon.SetText(getPortsList())
+					if err != nil {
+						log.Print(err)
+					}
+
+					err = reconnectPort()
+					if err != nil {
+						log.Print(err)
+					}
+
+					test, _ := getTestPing()
+					statusCon.AppendText("\r\n" + test)
+				},
+			},
+			PushButton{
+				AssignTo: &doneButton,
+				Text:     "Готово",
+				OnClicked: func() {
+					mainGUI = true
+					dlg.Cancel()
+				},
+			},
+			TextEdit{
+
+				AssignTo: &statusCon,
+				ReadOnly: true,
+				VScroll:  true,
+				Text: "Ошибка подключения к Bluetooth: " + inErr.Error() + "\r\nПроверьте, " +
+					"в настройках должно быть написано P3-34 подключён",
+			},
+		},
+	}.Run(nil)
+	if err != nil {
+		log.Panic(err)
+	}
+	return mainGUI
 }

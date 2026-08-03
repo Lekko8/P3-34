@@ -9,5 +9,13 @@
         <option name="profileType" value="GOROUTINE" />
       </GoProfileMapEntry>
     </profile>
+    <profile entry="C:\Users\GUEST\GoLandProfiles\P3-34-goroutine-2026-08-03-114756-113.pprof">
+      <GoProfileMapEntry>
+        <option name="buildAnchorMillis" value="1785746863222" />
+        <option name="file" value="P3-34-goroutine-2026-08-03-114756-113.pprof" />
+        <option name="ours" value="true" />
+        <option name="profileType" value="GOROUTINE" />
+      </GoProfileMapEntry>
+    </profile>
   </component>
 </project>

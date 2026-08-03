@@ -22,6 +22,15 @@ var filesFolder = "C:\\Users\\" + getUserName() + "\\Desktop\\p3-34\\P3-34 measu
 
 func main() {
 
-	GUI()
+	err := openPort()
+	if err != nil {
+		if errGUI(err) {
+			GUI()
+		}
+	} else {
+		GUI()
+	}
+
+	log.Print("Закрыли(")
 
 }
