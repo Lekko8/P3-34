@@ -17,7 +17,7 @@ func GUI() {
 		inputName   *walk.LineEdit
 		inputOrder  *walk.LineEdit
 		inputHz     *walk.LineEdit
-		statusFiles *walk.TextEdit
+		statusMeas  *walk.TextEdit
 		statusLabel *walk.Label
 		progressBar *walk.ProgressBar
 		initButton  *walk.PushButton
@@ -111,10 +111,11 @@ func GUI() {
 							start := time.Now()
 
 							filesFolder = inputWay.Text()
+							hz := inputHz.Text()
 
 							if runner == nil {
 								runner = NewMeasRun(
-									statusLabel, statusFiles,
+									statusLabel, statusMeas,
 									progressBar, initButton, mw)
 							}
 
@@ -136,7 +137,7 @@ func GUI() {
 							}
 
 							if runner.testPingBt() {
-								runner.Run(totalCycles, cycleMinutes)
+								runner.Run(totalCycles, cycleMinutes, hz)
 							}
 							log.Print("Кнопка: ", time.Since(start))
 						},
@@ -174,20 +175,22 @@ func GUI() {
 				},
 			},
 
-			TextEdit{AssignTo: &statusFiles, ReadOnly: true, VScroll: true},
+			TextEdit{AssignTo: &statusMeas, ReadOnly: true, VScroll: true},
 		},
 	}
 
 	if err := mainWindow.Create(); err != nil {
-		log.Fatal(err)
+		log.Panic(err)
 	}
 
 	mw.Run()
 
-	err := closePort()
-	if err != nil {
-		log.Print(err) // лол
-	}
+	defer func() {
+		err := closePort()
+		if err != nil {
+			log.Print(err)
+		}
+	}()
 }
 
 func connectGUI(owner walk.Form, appIcon *walk.Icon) {
@@ -229,7 +232,7 @@ func connectGUI(owner walk.Form, appIcon *walk.Icon) {
 		},
 	}
 	if err := dialog.Create(owner); err != nil {
-		log.Fatal(err)
+		log.Panic(err)
 	}
 
 	err := statusConnect.SetText(getPortsList())
@@ -278,7 +281,7 @@ func errGUI(inErr error) bool {
 			},
 			PushButton{
 				AssignTo: &doneButton,
-				Text:     "Готово",
+				Text:     "Должно работать",
 				OnClicked: func() {
 					mainGUI = true
 					dlg.Cancel()

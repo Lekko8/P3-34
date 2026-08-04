@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"strings"
 	"sync"
 
 	"github.com/lxn/walk"
@@ -139,7 +140,7 @@ func (r *MeasRun) DoMeas() error {
 }
 
 // Run запускает измерения
-func (r *MeasRun) Run(totalCycles, cycleMinutes int) {
+func (r *MeasRun) Run(totalCycles, cycleMinutes int, hz string) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
@@ -165,8 +166,11 @@ func (r *MeasRun) Run(totalCycles, cycleMinutes int) {
 			log.Print(err)
 		}
 		if r.statusFiles != nil {
-			r.statusFiles.AppendText(getMetaData())
-			r.statusFiles.AppendText(getUBatt())
+			r.statusFiles.AppendText(getInfo())
+			if hz != "" {
+				r.statusFiles.AppendText(setFreq(strings.Replace(hz, ",", ".", 1)))
+			}
+			newCSV()
 		}
 		r.progressBar.SetValue(0)
 	})
@@ -229,6 +233,7 @@ func (r *MeasRun) runLoop() {
 	})
 }
 
+// testPingBt проверяет соединение
 func (r *MeasRun) testPingBt() bool {
 	result, ping := getTestPing()
 	r.statusFiles.AppendText(result)

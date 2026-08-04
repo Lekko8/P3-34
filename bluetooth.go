@@ -4,9 +4,16 @@ import (
 	"errors"
 	"log"
 	"strconv"
+	"strings"
+	"sync"
 	"time"
 
 	"go.bug.st/serial"
+)
+
+var (
+	port   serial.Port
+	portMu sync.Mutex
 )
 
 // Отправляет сообщение по открытому коннекту
@@ -51,10 +58,59 @@ func btRead() (string, error) {
 		if goerr != nil {
 			return "Ошибка чтения", goerr
 		}
-		return string(data[:n]), nil
+		return strings.TrimSuffix(string(data[:n]), "EOT"), nil
 	case <-time.After(1200 * time.Millisecond):
 		return "Таймаут чтения", errors.New("timeout of reading from port")
 	}
+}
+
+// Открытие порта
+func openPort() error {
+	mode := &serial.Mode{BaudRate: 9600}
+	p, err := serial.Open("COM4", mode)
+	if err != nil {
+		log.Print(err)
+	}
+	port = p
+	return err
+}
+
+// Закрытие порта
+func closePort() error {
+	portMu.Lock()
+	defer portMu.Unlock()
+	if port != nil {
+		err := port.Close()
+		if err != nil {
+			log.Print(err)
+		}
+		return err
+	}
+	return nil
+}
+
+// Перезапуск порта
+func reconnectPort() error {
+	portMu.Lock()
+	defer portMu.Unlock()
+	log.Print("reconnecting port: ", port)
+	if port != nil {
+		err := port.Close()
+		if err != nil {
+			log.Print("port.Close(): ", err)
+		}
+		port = nil
+	}
+	portMu.Unlock()
+	time.Sleep(800 * time.Millisecond)
+	portMu.Lock()
+	err := openPort()
+	log.Print("reconnected port: ", port)
+	if err != nil {
+		log.Print("openPort(): ", err)
+		return err
+	}
+	return nil
 }
 
 // Открывает коннект по стандартному порту

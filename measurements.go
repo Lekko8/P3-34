@@ -15,7 +15,6 @@ func startMeas(ctx context.Context, m int, runner *MeasRun) string {
 	defer ticker.Stop()
 
 	start := time.Now()
-	var currentValue string
 
 	for {
 		select {
@@ -28,9 +27,8 @@ func startMeas(ctx context.Context, m int, runner *MeasRun) string {
 			progress := max(min(int((elapsed.Seconds()/s.Seconds())*100), 100), 0)
 			runner.UpdateProgress(progress)
 			if elapsed >= s {
-				currentValue = getCurrentValue()
 				runner.UpdateProgress(100)
-				return currentValue
+				return getMeas()
 			}
 			if progress%10 == 0 {
 				runner.mw.Synchronize(func() {
@@ -47,10 +45,30 @@ func startMeas(ctx context.Context, m int, runner *MeasRun) string {
 	}
 }
 
-// Запрашивает текущее значение
-func getCurrentValue() string {
+// Проводит измерение
+func getMeas() string {
 
-	err := btWrite("MEAS:AVR")
+	ans := get("MEAS:AVR") + "\r\n" + get("MEAS:MAX") + "\r\n" + get("NEWMEAS")
+
+	addToCSV(ans)
+
+	return ans
+}
+
+// Запрашивает информацию перед измерением
+func getInfo() string {
+
+	ans := get("?") + get("UBATT") + get("NEWMEAS")
+
+	addToCSV(ans)
+
+	return ans
+}
+
+// Отправляет и читает по запросу
+func get(this string) string {
+
+	err := btWrite(this)
 	if err != nil {
 		log.Print(err)
 	}
@@ -63,10 +81,10 @@ func getCurrentValue() string {
 	return "\n" + ans
 }
 
-// Запрашивает метаданные
-func getMetaData() string {
+// Устанавливает частоту
+func setFreq(v string) string {
 
-	err := btWrite("?")
+	err := btWrite("FREQ" + v)
 	if err != nil {
 		log.Print(err)
 	}
@@ -76,23 +94,7 @@ func getMetaData() string {
 		log.Print(err)
 	}
 
-	return ans + "\r\n"
-}
-
-// Запрашивает уровень батареи
-func getUBatt() string {
-
-	err := btWrite("UBATT")
-	if err != nil {
-		log.Print(err)
-	}
-
-	ans, err := btRead()
-	if err != nil {
-		log.Print(err)
-	}
-
-	return ans + "\r\n"
+	return "\n" + ans
 }
 
 // Проверяет соединение
