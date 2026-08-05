@@ -16,7 +16,7 @@ func GUI() {
 		inputLong   *walk.LineEdit
 		inputName   *walk.LineEdit
 		inputOrder  *walk.LineEdit
-		inputHz     *walk.LineEdit
+		inputFreq   *walk.LineEdit
 		statusMeas  *walk.TextEdit
 		statusLabel *walk.Label
 		progressBar *walk.ProgressBar
@@ -55,7 +55,7 @@ func GUI() {
 							},
 							Label{Text: "Частота:"},
 							LineEdit{
-								AssignTo: &inputHz,
+								AssignTo: &inputFreq,
 								MinSize:  Size{Width: 50, Height: 0},
 								Text:     "2,2",
 							},
@@ -111,7 +111,10 @@ func GUI() {
 							start := time.Now()
 
 							filesFolder = inputWay.Text()
-							hz := inputHz.Text()
+							freq := inputFreq.Text()
+
+							statusMeas.AppendText("КНОПКА")
+							log.Print("КНОПКА")
 
 							if runner == nil {
 								runner = NewMeasRun(
@@ -120,7 +123,7 @@ func GUI() {
 							}
 
 							if runner.isWorking {
-								runner.Stop("Измерение прервано")
+								runner.stop()
 								return
 							}
 
@@ -137,7 +140,7 @@ func GUI() {
 							}
 
 							if runner.testPingBt() {
-								runner.Run(totalCycles, cycleMinutes, hz)
+								runner.run(totalCycles, cycleMinutes, freq)
 							}
 							log.Print("Кнопка: ", time.Since(start))
 						},

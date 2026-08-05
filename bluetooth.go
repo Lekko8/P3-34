@@ -27,7 +27,7 @@ func btWrite(message string) error {
 
 	select {
 	case err := <-errChan:
-		log.Print("btWrite: ", err)
+		//log.Print("btWrite: ", err)
 		return err
 	case <-time.After(1200 * time.Millisecond):
 		log.Print("btWrite: timeout")
@@ -58,7 +58,7 @@ func btRead() (string, error) {
 		if goerr != nil {
 			return "Ошибка чтения", goerr
 		}
-		return strings.TrimSuffix(string(data[:n]), "EOT"), nil
+		return strings.Split(string(data[:n]), "EOT")[0], nil
 	case <-time.After(1200 * time.Millisecond):
 		return "Таймаут чтения", errors.New("timeout of reading from port")
 	}
@@ -112,55 +112,6 @@ func reconnectPort() error {
 	}
 	return nil
 }
-
-// Открывает коннект по стандартному порту
-//func bt(ctx context.Context) serial.Port {
-//
-//	result := make(chan serial.Port, 1)
-//
-//	go func() {
-//		log.Print("Открываю порт")
-//
-//		mode := &serial.Mode{
-//			BaudRate: 9600,
-//		}
-//
-//		port, err := serial.Open("COM4", mode)
-//		if err != nil {
-//			log.Print("Ошибка открытия порта: ", err)
-//			close(result)
-//			return
-//		}
-//
-//		select {
-//		case <-ctx.Done():
-//			err := port.Close()
-//			if err != nil {
-//				log.Print(err)
-//			}
-//			close(result)
-//			return
-//		default:
-//			result <- port
-//			log.Print("Выключаю go открыть порт")
-//		}
-//	}()
-//
-//	select {
-//	case port, ok := <-result:
-//		if !ok {
-//			log.Print("канал почему-то закрыт")
-//			return nil
-//		}
-//		return port
-//	case <-ctx.Done():
-//		log.Print("контекст закрыт")
-//		return nil
-//	case <-time.After(time.Millisecond * 500):
-//		log.Print("таймаут")
-//		return nil
-//	}
-//}
 
 // Читает список доступных портов и отдаёт их список
 func getPortsList() string {

@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 	"log"
-	"strings"
 	"sync"
+	"time"
 
 	"github.com/lxn/walk"
 )
@@ -22,7 +22,7 @@ type MeasRun struct {
 	wg           sync.WaitGroup
 
 	statusLabel *walk.Label
-	statusFiles *walk.TextEdit
+	statusMeas  *walk.TextEdit
 	progressBar *walk.ProgressBar
 	initButton  *walk.PushButton
 	mw          *walk.MainWindow
@@ -30,22 +30,22 @@ type MeasRun struct {
 
 func NewMeasRun(
 	statusLabel *walk.Label,
-	statusFiles *walk.TextEdit,
+	statusMeas *walk.TextEdit,
 	progressBar *walk.ProgressBar,
 	initButton *walk.PushButton,
 	mw *walk.MainWindow) *MeasRun {
 
 	return &MeasRun{
 		statusLabel: statusLabel,
-		statusFiles: statusFiles,
+		statusMeas:  statusMeas,
 		progressBar: progressBar,
 		initButton:  initButton,
 		mw:          mw,
 	}
 }
 
-// Stop останавливает измерение
-func (r *MeasRun) Stop(message string) {
+// Останавливает измерение
+func (r *MeasRun) stop() {
 	r.mu.Lock()
 
 	if r.cancel != nil {
@@ -60,87 +60,23 @@ func (r *MeasRun) Stop(message string) {
 		if err != nil {
 			log.Print(err)
 		}
-		if message != "" {
-			err = r.statusLabel.SetText(message)
-			if err != nil {
-				log.Print(err)
-			}
+
+		err = r.statusLabel.SetText("Измерение прервано")
+		if err != nil {
+			log.Print(err)
 		}
+		//if message != "" {
+		//	err = r.statusLabel.SetText(message)
+		//	if err != nil {
+		//		log.Print(err)
+		//	}
+		//}
 		r.progressBar.SetValue(0)
 	})
 }
 
-// UpdateStatus обновляет статус
-func (r *MeasRun) UpdateStatus(message string) {
-	r.mw.Synchronize(func() {
-		err := r.statusLabel.SetText(message)
-		if err != nil {
-			log.Print(err)
-		}
-	})
-}
-
-// UpdateCycle сменяет цикл
-func (r *MeasRun) UpdateCycle(current, total int) {
-	r.mu.Lock()
-	r.currentCycle = current
-	r.mu.Unlock()
-	r.mw.Synchronize(func() {
-		err := r.statusLabel.SetText(
-			fmt.Sprintf("Текущий цикл: %d/%d", current, total))
-		if err != nil {
-			log.Print(err)
-		}
-		r.progressBar.SetValue(0)
-	})
-}
-
-// UpdateProgress обновляет прогресс бар
-func (r *MeasRun) UpdateProgress(percent int) {
-
-	r.mu.Lock()
-	r.progress = percent
-	r.mu.Unlock()
-
-	r.mw.Synchronize(func() {
-		if r.progressBar != nil {
-			r.progressBar.SetValue(percent)
-		}
-	})
-}
-
-// DoMeas выполняет измерение
-func (r *MeasRun) DoMeas() error {
-	done := make(chan struct{})
-	var result string
-	go func() {
-		result = startMeas(r.ctx, r.cycleMinutes, r)
-
-		select {
-		case <-r.ctx.Done():
-			close(done)
-			return
-		default:
-			r.mw.Synchronize(func() {
-				if r.statusFiles != nil {
-					r.statusFiles.AppendText(result + "\r\n")
-				}
-				r.progressBar.SetValue(0)
-			})
-		}
-		close(done)
-	}()
-
-	select {
-	case <-r.ctx.Done():
-		return r.ctx.Err()
-	case <-done:
-		return nil
-	}
-}
-
-// Run запускает измерения
-func (r *MeasRun) Run(totalCycles, cycleMinutes int, hz string) {
+// Запускает измерение
+func (r *MeasRun) run(totalCycles, cycleMinutes int, freq string) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
@@ -165,21 +101,17 @@ func (r *MeasRun) Run(totalCycles, cycleMinutes int, hz string) {
 		if err != nil {
 			log.Print(err)
 		}
-		if r.statusFiles != nil {
-			r.statusFiles.AppendText(getInfo())
-			if hz != "" {
-				r.statusFiles.AppendText(setFreq(strings.Replace(hz, ",", ".", 1)))
-			}
-			newCSV()
+		if r.statusMeas != nil {
+
 		}
 		r.progressBar.SetValue(0)
 	})
 
-	go r.runLoop()
+	go r.runLoop(freq)
 }
 
-// runLoop запускает цикл
-func (r *MeasRun) runLoop() {
+// Запускает цикл
+func (r *MeasRun) runLoop(freq string) {
 	defer r.wg.Done()
 	defer func() {
 		r.mu.Lock()
@@ -195,11 +127,14 @@ func (r *MeasRun) runLoop() {
 		})
 	}()
 
+	r.statusMeas.AppendText(getInfo(freq)) // получаем мета-данные прибора и устанавливаем частоту
+	newCSV()
+
 	for i := 1; i <= r.totalCycles; i++ {
 		// Проверка отмены
 		select {
 		case <-r.ctx.Done():
-			r.UpdateStatus(
+			r.updateStatus(
 				fmt.Sprintf(
 					"Прервано на цикле %d/%d", i, r.totalCycles))
 			r.mw.Synchronize(func() {
@@ -210,11 +145,11 @@ func (r *MeasRun) runLoop() {
 		}
 
 		// Обновление цикла
-		r.UpdateCycle(i, r.totalCycles)
+		r.updateCycle(i, r.totalCycles)
 
 		// Выполнение измерения
-		if err := r.DoMeas(); err != nil {
-			r.UpdateStatus(
+		if err := r.doMeas(); err != nil {
+			r.updateStatus(
 				fmt.Sprintf(
 					"Прервано на цикле %d/%d", i, r.totalCycles))
 			r.mw.Synchronize(func() {
@@ -225,7 +160,7 @@ func (r *MeasRun) runLoop() {
 	}
 
 	// Завершено
-	r.UpdateStatus(
+	r.updateStatus(
 		fmt.Sprintf(
 			"Измерение завершено: %d/%d", r.totalCycles, r.totalCycles))
 	r.mw.Synchronize(func() {
@@ -233,14 +168,121 @@ func (r *MeasRun) runLoop() {
 	})
 }
 
-// testPingBt проверяет соединение
+// Выполняет измерение
+func (r *MeasRun) doMeas() error {
+	done := make(chan struct{})
+	var result string
+	go func() {
+		result = r.meas(r.ctx, r.cycleMinutes)
+
+		select {
+		case <-r.ctx.Done():
+			close(done)
+			return
+		default:
+			r.mw.Synchronize(func() {
+				if r.statusMeas != nil {
+					r.statusMeas.AppendText(result + "\r\n")
+				}
+				r.progressBar.SetValue(0)
+			})
+		}
+		close(done)
+	}()
+
+	select {
+	case <-r.ctx.Done():
+		return r.ctx.Err()
+	case <-done:
+		return nil
+	}
+}
+
+// Запускает новый цикл измерений
+func (r *MeasRun) meas(ctx context.Context, m int) string {
+	s := time.Duration(m) * time.Second //TODO: заменить на минуты перед релизом
+
+	ticker := time.NewTicker(500 * time.Millisecond)
+	defer ticker.Stop()
+
+	start := time.Now()
+
+	for {
+		select {
+		case <-ctx.Done():
+			return "Измерение прервано"
+
+		case <-ticker.C:
+			elapsed := time.Since(start)
+
+			progress := max(min(int((elapsed.Seconds()/s.Seconds())*100), 100), 0)
+			r.updateProgress(progress)
+			if elapsed >= s {
+				r.updateProgress(100)
+				return getMeas() // выполняем измерение
+			}
+			if progress%10 == 0 {
+				r.mw.Synchronize(func() {
+					err := r.statusLabel.
+						SetText(
+							fmt.Sprintf("Текущий цикл: %d/%d",
+								r.currentCycle, r.totalCycles))
+					if err != nil {
+						log.Print(err)
+					}
+				})
+			}
+		}
+	}
+}
+
+// Сменяет цикл
+func (r *MeasRun) updateCycle(current, total int) {
+	r.mu.Lock()
+	r.currentCycle = current
+	r.mu.Unlock()
+	r.mw.Synchronize(func() {
+		err := r.statusLabel.SetText(
+			fmt.Sprintf("Текущий цикл: %d/%d", current, total))
+		if err != nil {
+			log.Print(err)
+		}
+		r.progressBar.SetValue(0)
+	})
+}
+
+// Обновляет статус
+func (r *MeasRun) updateStatus(message string) {
+	r.mw.Synchronize(func() {
+		err := r.statusLabel.SetText(message)
+		if err != nil {
+			log.Print(err)
+		}
+	})
+}
+
+// Обновляет прогресс бар
+func (r *MeasRun) updateProgress(percent int) {
+
+	r.mu.Lock()
+	r.progress = percent
+	r.mu.Unlock()
+
+	r.mw.Synchronize(func() {
+		if r.progressBar != nil {
+			r.progressBar.SetValue(percent)
+		}
+	})
+}
+
+// Проверяет соединение
 func (r *MeasRun) testPingBt() bool {
 	result, ping := getTestPing()
-	r.statusFiles.AppendText(result)
+	r.statusMeas.AppendText(result)
 	return ping
 }
 
-// createFile создаёт файл для начала записи циклов
+// Создаёт файл для начала записи циклов
 func createFile(filesFolder string) string {
 	return "Имя файла в " + filesFolder
 }
