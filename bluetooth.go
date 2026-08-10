@@ -4,7 +4,6 @@ import (
 	"errors"
 	"log"
 	"strconv"
-	"strings"
 	"sync"
 	"time"
 
@@ -18,6 +17,10 @@ var (
 
 // Отправляет сообщение по открытому коннекту
 func btWrite(message string) error {
+
+	if port == nil {
+		return errors.New("port not initialized")
+	}
 
 	errChan := make(chan error, 1)
 	go func() {
@@ -38,12 +41,12 @@ func btWrite(message string) error {
 // Читает сообщение
 func btRead() (string, error) {
 
-	err := port.SetReadTimeout(3 * time.Second)
+	err := port.SetReadTimeout(2 * time.Second)
 	if err != nil {
 		log.Print("connectBt.SetReadTimeout: ", err)
 	}
 
-	data := make([]byte, 1024)
+	data := make([]byte, 4096)
 	done := make(chan struct{})
 	var n int
 	var goerr error
@@ -58,8 +61,9 @@ func btRead() (string, error) {
 		if goerr != nil {
 			return "Ошибка чтения", goerr
 		}
-		return strings.Split(string(data[:n]), "EOT")[0], nil
-	case <-time.After(1200 * time.Millisecond):
+		// strings.Split(string(data[:n]), "EOT")[0]
+		return string(data[:n]), nil
+	case <-time.After(2 * time.Second):
 		return "Таймаут чтения", errors.New("timeout of reading from port")
 	}
 }
@@ -69,7 +73,7 @@ func openPort() error {
 	mode := &serial.Mode{BaudRate: 9600}
 	p, err := serial.Open("COM4", mode)
 	if err != nil {
-		log.Print(err)
+		log.Print("openPort - serial.Open(\"COM4\", mode): ", err)
 	}
 	port = p
 	return err
@@ -82,7 +86,7 @@ func closePort() error {
 	if port != nil {
 		err := port.Close()
 		if err != nil {
-			log.Print(err)
+			log.Print("closePort: ", err)
 		}
 		return err
 	}
@@ -115,18 +119,18 @@ func reconnectPort() error {
 
 // Читает список доступных портов и отдаёт их список
 func getPortsList() string {
-	//start := time.Now()
-	//defer log.Print(time.Since(start))
+	start := time.Now()
+	defer log.Print("getPortsList: ", time.Since(start))
 
 	ports, err := serial.GetPortsList()
 	if err != nil {
-		log.Print(err)
+		log.Print("getPortsList: ", err)
 	}
 	if len(ports) != 0 {
 		var portList string
 		for _, port := range ports {
 			portList = portList + "\r\n" + port
-			log.Println(port)
+			log.Println("getPortsList: ", port)
 		}
 
 		return "Портов: " + strconv.Itoa(len(ports)) + "\n\r" + portList

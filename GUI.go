@@ -109,12 +109,13 @@ func GUI() {
 						AssignTo: &initButton,
 						OnClicked: func() {
 							start := time.Now()
+							defer log.Print("Начать измерение: ", time.Since(start))
+							log.Print("КНОПКА: Начать измерение")
 
 							filesFolder = inputWay.Text()
 							freq := inputFreq.Text()
 
-							statusMeas.AppendText("КНОПКА")
-							log.Print("КНОПКА")
+							statusMeas.AppendText("Начать измерение")
 
 							if runner == nil {
 								runner = NewMeasRun(
@@ -142,7 +143,7 @@ func GUI() {
 							if runner.testPingBt() {
 								runner.run(totalCycles, cycleMinutes, freq)
 							}
-							log.Print("Кнопка: ", time.Since(start))
+
 						},
 					},
 
@@ -150,12 +151,16 @@ func GUI() {
 						Text:    "Собрать .xlsx за сегодня",
 						MaxSize: Size{Width: 150, Height: 0},
 						OnClicked: func() {
+							log.Print("КНОПКА: Собрать .xlsx за сегодня")
 							filesFolder = inputWay.Text()
+							order := inputOrder.Text()
+
 							err := statusLabel.SetText(
-								"Записано в " + createFile(filesFolder))
+								"Записано в " + createFile(filesFolder, order))
 							if err != nil {
 								log.Print(err)
 							}
+
 						},
 					},
 				},
@@ -194,6 +199,7 @@ func GUI() {
 			log.Print(err)
 		}
 	}()
+
 }
 
 func connectGUI(owner walk.Form, appIcon *walk.Icon) {
@@ -216,6 +222,9 @@ func connectGUI(owner walk.Form, appIcon *walk.Icon) {
 				Text:    "Повторить проверку",
 				MaxSize: Size{Width: 100, Height: 0},
 				OnClicked: func() {
+					start := time.Now()
+					defer log.Print("Повторить проверку: ", time.Since(start))
+					log.Print("КНОПКА: Повторить проверку")
 
 					err := reconnectPort()
 					if err != nil {
@@ -267,6 +276,9 @@ func errGUI(inErr error) bool {
 				AssignTo: &reconnectButton,
 				Text:     "Переподключиться",
 				OnClicked: func() {
+					start := time.Now()
+					defer log.Print("Переподключиться: ", time.Since(start))
+					log.Print("КНОПКА: Переподключиться")
 
 					err := statusCon.SetText(getPortsList())
 					if err != nil {
@@ -280,12 +292,14 @@ func errGUI(inErr error) bool {
 
 					test, _ := getTestPing()
 					statusCon.AppendText("\r\n" + test)
+
 				},
 			},
 			PushButton{
 				AssignTo: &doneButton,
 				Text:     "Должно работать",
 				OnClicked: func() {
+					log.Print("КНОПКА: Должно работать")
 					mainGUI = true
 					dlg.Cancel()
 				},

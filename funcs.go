@@ -281,8 +281,3 @@ func (r *MeasRun) testPingBt() bool {
 	r.statusMeas.AppendText(result)
 	return ping
 }
-
-// Создаёт файл для начала записи циклов
-func createFile(filesFolder string) string {
-	return "Имя файла в " + filesFolder
-}

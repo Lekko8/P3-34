@@ -37,14 +37,15 @@ func get(this string) string {
 
 	err := btWrite(this)
 	if err != nil {
-		log.Print(err)
+		log.Print("get btWrite(): ", err)
 	}
 
 	ans, err := btRead()
 	if err != nil {
-		log.Print(err)
+		log.Print("get btRead(): ", err)
 	}
 
+	log.Print("get [", this, "]: ", ans)
 	return "\n" + ans
 }
 

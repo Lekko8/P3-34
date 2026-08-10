@@ -6,9 +6,11 @@ import (
 	"os"
 	"os/user"
 	"strings"
+	"time"
 )
 
 var filesFolder = "C:\\Users\\" + getUserName() + "\\Desktop\\p3-34\\P3-34 measurements"
+var file *os.File
 
 //rsrc -manifest P3-34.manifest -o rsrc.syso
 //rsrc -ico icon.ico -manifest P3-34.manifest -o rsrc_windows_amd64.syso
@@ -30,6 +32,11 @@ func main() {
 
 	log.Print("Закрыли(")
 
+	err = file.Close()
+	if err != nil {
+		log.Print(err)
+	}
+
 }
 
 func getUserName() string {
@@ -42,16 +49,15 @@ func getUserName() string {
 }
 
 func loging() {
-	file, err := os.OpenFile("P3-34.log", os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
+
+	var err error
+
+	file, err = os.OpenFile(time.Now().Format("02.01.2006_15.04_")+"P3-34.log", os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
 	if err != nil {
 		log.Panic("Не удалось открыть файл логов:", err)
 	}
-	defer func() {
-		err := file.Close()
-		if err != nil {
-			log.Print(err)
-		}
-	}()
+
+	_, _ = file.Write([]byte{0xEF, 0xBB, 0xBF})
 
 	multiWriter := io.MultiWriter(os.Stdout, file)
 

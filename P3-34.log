@@ -1,0 +1,198 @@
+2026/08/10 14:57:42 Открыли)
+2026/08/10 14:57:47 openPort - serial.Open("COM4", mode):The semaphore timeout period has expired.
+2026/08/10 14:57:50 getPortsList:  COM3
+2026/08/10 14:57:50 getPortsList:  COM4
+2026/08/10 14:57:50 reconnecting port: <nil>
+2026/08/10 14:57:56 openPort - serial.Open("COM4", mode):The semaphore timeout period has expired.
+2026/08/10 14:57:56 reconnected port: <nil>
+2026/08/10 14:57:56 openPort(): The semaphore timeout period has expired.
+2026/08/10 14:57:56 The semaphore timeout period has expired.
+2026/08/10 14:57:56 getTestPing - btWrite: port not initialized
+2026/08/10 14:57:56 getTestPing: 0s
+2026/08/10 14:58:06 getPortsList:  COM3
+2026/08/10 14:58:06 getPortsList:  COM4
+2026/08/10 14:58:09 reconnecting port: <nil>
+2026/08/10 14:58:15 openPort - serial.Open("COM4", mode):The semaphore timeout period has expired.
+2026/08/10 14:58:15 reconnected port: <nil>
+2026/08/10 14:58:15 openPort(): The semaphore timeout period has expired.
+2026/08/10 14:58:15 The semaphore timeout period has expired.
+2026/08/10 14:58:15 getPortsList:  COM3
+2026/08/10 14:58:15 getPortsList:  COM4
+2026/08/10 14:58:15 getTestPing - btWrite: port not initialized
+2026/08/10 14:58:15 getTestPing: 0s
+2026/08/10 14:58:25 КНОПКА
+2026/08/10 14:58:25 getTestPing - btWrite: port not initialized
+2026/08/10 14:58:25 getTestPing: 0s
+2026/08/10 14:58:25 Кнопка: 3.565ms
+2026/08/10 14:58:33 Закрыли(
+2026/08/10 17:22:26 Открыли)
+2026/08/10 17:22:31 openPort - serial.Open("COM4", mode): The semaphore timeout period has expired.
+2026/08/10 17:22:43 КНОПКА: Переподключиться
+2026/08/10 17:22:43 getPortsList:  COM3
+2026/08/10 17:22:43 getPortsList:  COM4
+2026/08/10 17:22:43 getPortsList: 0s
+2026/08/10 17:22:43 reconnecting port: <nil>
+2026/08/10 17:22:46 reconnected port: &{{{} {0 0}} 932 false}
+2026/08/10 17:22:46 getTestPing: 0s
+2026/08/10 17:22:46 Переподключиться: 0s
+2026/08/10 17:22:50 КНОПКА: Должно работать
+2026/08/10 17:22:59 КНОПКА: Начать измерение
+2026/08/10 17:22:59 getTestPing: 0s
+2026/08/10 17:22:59 Начать измерение: 0s
+2026/08/10 17:22:59 get [?]: T
+2026/08/10 17:22:59 get [UBATT]: EST OK!
+2026/08/10 17:22:59 get [FREQ:2.2]: ready >>
+2026/08/10 17:22:59 get [NEWMEAS]: >
+
+2026/08/10 17:22:59 add to CSV: 
+T
+EST OK!
+
+ready >>
+>
+
+2026/08/10 17:22:59 starting new CSV
+2026/08/10 17:23:07 get [MEAS:AVR]: UBATT = 5.0 V Medium
+ready >>>
+
+2026/08/10 17:23:07 get [MEAS:MAX]: <
+2026/08/10 17:23:07 get [NEWMEAS]: S> = 
+2026/08/10 17:23:07 add to CSV: 
+UBATT = 5.0 V Medium
+ready >>>
+
+<
+S> = 
+2026/08/10 17:23:16 get [MEAS:AVR]: (1.53 � 0.84) uW/cm2  (P=0.95)
+ready >>>
+
+2026/08/10 17:23:16 get [MEAS:MAX]: <
+2026/08/10 17:23:16 get [NEWMEAS]: S> = 
+2026/08/10 17:23:16 add to CSV: 
+(1.53 � 0.84) uW/cm2  (P=0.95)
+ready >>>
+
+<
+S> = 
+2026/08/10 17:23:24 get [MEAS:AVR]: (1.43 � 0.75) uW/cm2  (P=0.95)
+ready >>>
+
+2026/08/10 17:23:24 get [MEAS:MAX]: <
+2026/08/10 17:23:24 get [NEWMEAS]: S> = 
+2026/08/10 17:23:24 add to CSV: 
+(1.43 � 0.75) uW/cm2  (P=0.95)
+ready >>>
+
+<
+S> = 
+2026/08/10 17:23:32 get [MEAS:AVR]: (1.44 � 0.81) uW/cm2  (P=0.95)
+ready >>>
+
+2026/08/10 17:23:32 get [MEAS:MAX]: <
+2026/08/10 17:23:32 get [NEWMEAS]: S> = 
+2026/08/10 17:23:32 add to CSV: 
+(1.44 � 0.81) uW/cm2  (P=0.95)
+ready >>>
+
+<
+S> = 
+2026/08/10 17:23:40 get [MEAS:AVR]: (1.40 � 0.71) uW/cm2  (P=0.95)
+ready >>>
+
+2026/08/10 17:23:40 get [MEAS:MAX]: <
+2026/08/10 17:23:40 get [NEWMEAS]: S> = 
+2026/08/10 17:23:40 add to CSV: 
+(1.40 � 0.71) uW/cm2  (P=0.95)
+ready >>>
+
+<
+S> = 
+2026/08/10 17:23:48 get [MEAS:AVR]: (1.41 � 0.81) uW/cm2  (P=0.95)
+ready >>>
+
+2026/08/10 17:23:48 get [MEAS:MAX]: <
+2026/08/10 17:23:48 get [NEWMEAS]: S> = (
+2026/08/10 17:23:48 add to CSV: 
+(1.41 � 0.81) uW/cm2  (P=0.95)
+ready >>>
+
+<
+S> = (
+2026/08/10 17:23:56 get [MEAS:AVR]: 1.41 � 0.77) uW/cm2  (P=0.95)
+ready >>>
+
+2026/08/10 17:23:57 get [MEAS:MAX]: <
+2026/08/10 17:23:57 get [NEWMEAS]: S> = 
+2026/08/10 17:23:57 add to CSV: 
+1.41 � 0.77) uW/cm2  (P=0.95)
+ready >>>
+
+<
+S> = 
+2026/08/10 17:24:05 get [MEAS:AVR]: (1.40 � 0.74) uW/cm2  (P=0.95)
+ready >>>
+
+2026/08/10 17:24:05 get [MEAS:MAX]: <
+2026/08/10 17:24:05 get [NEWMEAS]: S> = 
+2026/08/10 17:24:05 add to CSV: 
+(1.40 � 0.74) uW/cm2  (P=0.95)
+ready >>>
+
+<
+S> = 
+2026/08/10 17:24:13 get [MEAS:AVR]: (1.40 � 0.77) uW/cm2  (P=0.95)
+ready >>>
+Unknown command ->EWMEAS
+ready >>>
+
+2026/08/10 17:24:13 get [MEAS:MAX]: <
+2026/08/10 17:24:13 get [NEWMEAS]: S> = 
+2026/08/10 17:24:13 add to CSV: 
+(1.40 � 0.77) uW/cm2  (P=0.95)
+ready >>>
+Unknown command ->EWMEAS
+ready >>>
+
+<
+S> = 
+2026/08/10 17:24:21 get [MEAS:AVR]: (1.40 � 0.77) uW/cm2  (P=0.95)
+ready >>>
+
+2026/08/10 17:24:21 get [MEAS:MAX]: <
+2026/08/10 17:24:21 get [NEWMEAS]: S> = (
+2026/08/10 17:24:21 add to CSV: 
+(1.40 � 0.77) uW/cm2  (P=0.95)
+ready >>>
+
+<
+S> = (
+2026/08/10 17:24:26 КНОПКА: Начать измерение
+2026/08/10 17:24:26 getTestPing: 0s
+2026/08/10 17:24:26 Начать измерение: 0s
+2026/08/10 17:24:27 get [?]: T
+2026/08/10 17:24:27 get [UBATT]: EST OK!
+2026/08/10 17:24:27 get [FREQ:2.2]: ready >>
+2026/08/10 17:24:27 get [NEWMEAS]: >
+
+2026/08/10 17:24:27 add to CSV: 
+T
+EST OK!
+
+ready >>
+>
+
+2026/08/10 17:24:27 starting new CSV
+2026/08/10 17:24:35 get [MEAS:AVR]: UBATT = 5.0 V Medium
+ready >>>
+
+2026/08/10 17:24:35 get [MEAS:MAX]: <
+2026/08/10 17:24:35 get [NEWMEAS]: S> = 
+2026/08/10 17:24:35 add to CSV: 
+UBATT = 5.0 V Medium
+ready >>>
+
+<
+S> = 
+2026/08/10 17:24:37 КНОПКА: Начать измерение
+2026/08/10 17:24:37 Начать измерение: 0s
+2026/08/10 17:25:01 Закрыли(
