@@ -17,7 +17,7 @@ var file *os.File
 
 func main() {
 
-	loging()
+	logging()
 
 	log.Print("Открыли)")
 
@@ -48,7 +48,7 @@ func getUserName() string {
 	return strings.Split(corUser.Username, "\\")[1]
 }
 
-func loging() {
+func logging() {
 
 	var err error
 

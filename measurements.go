@@ -1,6 +1,7 @@
 package main
 
 import (
+	"io"
 	"log"
 	"strings"
 	"time"
@@ -13,19 +14,31 @@ func getMeas() string {
 	//+ "\r\n"
 	addToCSV(ans)
 
-	return ans
+	return time.Now().String() + "\r\n" + ans
 }
 
 // Запрашивает информацию перед измерением и устанавливает частоту
 func getInfo(freq string) string {
 
-	ans := get("?") + get("UBATT")
+	var result = strings.Builder{}
+
+	result.WriteString(get("?"))
+	log.Print("result.WriteString(get(\"?\"))", result.String())
+	time.Sleep(10 * time.Millisecond)
+
+	result.WriteString(get("UBATT"))
+	log.Print("result.WriteString(get(\"UBATT\"))", result.String())
+	time.Sleep(10 * time.Millisecond)
 
 	if freq != "" {
-		ans += get("FREQ:" + strings.Replace(freq, ",", ".", 1))
+		result.WriteString(get("FREQ:" + strings.Replace(freq, ",", ".", 1)))
+		log.Print("result.WriteString(get(\"FREQ\"))", result.String())
+		time.Sleep(10 * time.Millisecond)
 	}
 
-	ans += get("NEWMEAS")
+	result.WriteString(get("NEWMEAS"))
+
+	ans := time.Now().String() + "\r\n" + result.String()
 
 	addToCSV(ans)
 
@@ -40,10 +53,19 @@ func get(this string) string {
 		log.Print("get btWrite(): ", err)
 	}
 
-	ans, err := btRead()
-	if err != nil {
-		log.Print("get btRead(): ", err)
+	var result = strings.Builder{}
+
+	if wr, err := btRead(); err == nil {
+		result.WriteString(wr)
 	}
+
+	if err != nil {
+		if err != io.EOF {
+			log.Print("get btRead(): ", err)
+		}
+	}
+
+	ans := result.String()
 
 	log.Print("get [", this, "]: ", ans)
 	return "\n" + ans
@@ -60,11 +82,16 @@ func getTestPing() (string, bool) {
 		return "Ошибка отправки сообщения", false
 	}
 
-	answer, err := btRead()
-	if err != nil {
+	var result = strings.Builder{}
+
+	if wr, err := btRead(); err == nil {
+		result.WriteString(wr)
+	} else {
 		log.Print("getTestPing - btRead: ", err)
 		return "Ошибка чтения", false
 	}
 
-	return answer, true
+	ans := result.String()
+
+	return ans, true
 }

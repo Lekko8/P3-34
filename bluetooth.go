@@ -40,33 +40,88 @@ func btWrite(message string) error {
 
 // Читает сообщение
 func btRead() (string, error) {
+	start := time.Now()
+	defer log.Print("btRead()", time.Since(start))
 
-	err := port.SetReadTimeout(2 * time.Second)
-	if err != nil {
-		log.Print("connectBt.SetReadTimeout: ", err)
-	}
+	var answer []byte // Используем []byte для эффективности
+	buffer := make([]byte, 2048)
+	const EOT = 0x04
 
-	data := make([]byte, 4096)
-	done := make(chan struct{})
-	var n int
-	var goerr error
-
-	go func() {
-		n, goerr = port.Read(data)
-		close(done)
-	}()
-
-	select {
-	case <-done:
-		if goerr != nil {
-			return "Ошибка чтения", goerr
+	for {
+		if err := port.SetReadTimeout(100 * time.Millisecond); err != nil {
+			return "", err
 		}
-		// strings.Split(string(data[:n]), "EOT")[0]
-		return string(data[:n]), nil
-	case <-time.After(2 * time.Second):
-		return "Таймаут чтения", errors.New("timeout of reading from port")
+
+		n, err := port.Read(buffer)
+		if err != nil {
+			if err.Error() == "i/o timeout" {
+				return string(answer), nil
+			}
+			return "", err
+		}
+
+		if n > 0 {
+			// Ищем EOT в полученных данных
+			eotIndex := -1
+			for i := range n {
+				if buffer[i] == EOT {
+					eotIndex = i
+					break
+				}
+			}
+
+			if eotIndex >= 0 {
+				// Нашли EOT - добавляем данные до него и выходим
+				answer = append(answer, buffer[:eotIndex]...)
+				return string(answer), nil
+			}
+
+			// EOT не найден - добавляем все данные
+			answer = append(answer, buffer[:n]...)
+		}
 	}
 }
+
+//func btRead() (string, error) {
+//
+//	start := time.Now()
+//	defer log.Print("btRead()", time.Since(start))
+//
+//	//err := port.SetReadTimeout(2 * time.Second)
+//	//if err != nil {
+//	//	log.Print("connectBt.SetReadTimeout: ", err)
+//	//}
+//
+//	var answer strings.Builder
+//	ticker := time.NewTicker(100 * time.Millisecond)
+//	defer ticker.Stop()
+//
+//	for {
+//		data := make([]byte, 2048)
+//		done := make(chan struct{})
+//		var n int
+//		var goerr error
+//
+//		go func() {
+//			n, goerr = port.Read(data)
+//			close(done)
+//		}()
+//
+//		select {
+//		case <-done:
+//			if goerr != nil {
+//				return answer.String(), goerr
+//			}
+//			// strings.Split(string(data[:n]), "EOT")[0]
+//			answer.Write(data[:n])
+//			//return answer.String(), nil
+//		case <-ticker.C:
+//			log.Print("btRead: timeout")
+//			return answer.String(), nil
+//			//return "Таймаут чтения", errors.New("timeout of reading from port")
+//		}
+//	}
+//}
 
 // Открытие порта
 func openPort() error {
