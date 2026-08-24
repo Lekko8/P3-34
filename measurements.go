@@ -3,46 +3,71 @@ package main
 import (
 	"io"
 	"log"
+	"os"
 	"strings"
 	"time"
 )
 
 // Проводит измерение
-func getMeas() string {
+func getMeas(fileSCV *os.File) string {
 
-	ans := get("MEAS:AVR") + get("MEAS:MAX") + get("NEWMEAS")
-	//+ "\r\n"
-	addToCSV(ans)
+	var (
+		result = strings.Builder{}
+		ans    []string
+	)
 
-	return time.Now().String() + "\r\n" + ans
+	ans = append(ans, time.Now().Format("15:04:05"))
+	ans = append(ans, get("MEAS:AVR"))
+	ans = append(ans, get("MEAS:MAX"))
+	go addToCSV(fileSCV, ans)
+	ans = append(ans, get("NEWMEAS"))
+
+	for _, res := range ans {
+		result.WriteString(res)
+	}
+
+	return result.String()
 }
 
 // Запрашивает информацию перед измерением и устанавливает частоту
-func getInfo(freq string) string {
+func getInfo(fileSCV *os.File, freq string) string {
 
-	var result = strings.Builder{}
+	var (
+		result = strings.Builder{}
+		ans    []string
+	)
 
-	result.WriteString(get("?"))
+	ans = append(ans, time.Now().String())
+
+	D.ID = get("?")
+	ans = append(ans, D.ID)
 	log.Print("result.WriteString(get(\"?\"))", result.String())
-	time.Sleep(10 * time.Millisecond)
+	//time.Sleep(10 * time.Millisecond)
 
-	result.WriteString(get("UBATT"))
+	D.Battery = get("UBATT")
+	ans = append(ans, D.Battery)
 	log.Print("result.WriteString(get(\"UBATT\"))", result.String())
-	time.Sleep(10 * time.Millisecond)
+	//time.Sleep(10 * time.Millisecond)
 
+	D.Frequency = ""
 	if freq != "" {
-		result.WriteString(get("FREQ:" + strings.Replace(freq, ",", ".", 1)))
+		D.Frequency = get("FREQ:" + strings.Replace(freq, ",", ".", 1))
+		ans = append(ans, D.Frequency)
 		log.Print("result.WriteString(get(\"FREQ\"))", result.String())
-		time.Sleep(10 * time.Millisecond)
+		//time.Sleep(10 * time.Millisecond)
 	}
 
-	result.WriteString(get("NEWMEAS"))
+	ans = append(ans, get("NEWMEAS"))
 
-	ans := time.Now().String() + "\r\n" + result.String()
+	result.WriteString(time.Now().Format("20060102_150405") + "\r\n")
 
-	addToCSV(ans)
+	for _, res := range ans {
+		result.WriteString(res)
+	}
 
-	return ans
+	go addToCSV(fileSCV, ans)
+
+	return result.String()
 }
 
 // Отправляет и читает по запросу

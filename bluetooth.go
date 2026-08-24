@@ -131,6 +131,7 @@ func openPort() error {
 		log.Print("openPort - serial.Open(\"COM4\", mode): ", err)
 	}
 	port = p
+	D.Port = "COM4"
 	return err
 }
 

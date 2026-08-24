@@ -120,7 +120,8 @@ func GUI() {
 							if runner == nil {
 								runner = NewMeasRun(
 									statusLabel, statusMeas,
-									progressBar, initButton, mw)
+									progressBar, initButton,
+									inputName, mw)
 							}
 
 							if runner.isWorking {
@@ -134,7 +135,8 @@ func GUI() {
 								return
 							}
 
-							cycleMinutes, err := strconv.Atoi(inputLong.Text())
+							D.Interval = inputLong.Text()
+							cycleMinutes, err := strconv.Atoi(D.Interval)
 							if err != nil {
 								log.Print(err)
 								return

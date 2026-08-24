@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"os"
 	"sync"
 	"time"
 
@@ -25,6 +26,7 @@ type MeasRun struct {
 	statusMeas  *walk.TextEdit
 	progressBar *walk.ProgressBar
 	initButton  *walk.PushButton
+	inputName   *walk.LineEdit
 	mw          *walk.MainWindow
 }
 
@@ -33,6 +35,7 @@ func NewMeasRun(
 	statusMeas *walk.TextEdit,
 	progressBar *walk.ProgressBar,
 	initButton *walk.PushButton,
+	inputName *walk.LineEdit,
 	mw *walk.MainWindow) *MeasRun {
 
 	return &MeasRun{
@@ -40,6 +43,7 @@ func NewMeasRun(
 		statusMeas:  statusMeas,
 		progressBar: progressBar,
 		initButton:  initButton,
+		inputName:   inputName,
 		mw:          mw,
 	}
 }
@@ -127,8 +131,13 @@ func (r *MeasRun) runLoop(freq string) {
 		})
 	}()
 
-	r.statusMeas.AppendText(getInfo(freq)) // получаем мета-данные прибора и устанавливаем частоту
-	newCSV()
+	fileCSV, err := newCSV(r.inputName.Text())
+	if err != nil {
+		log.Print("Не удалось создать CSV файл: ", err)
+	}
+	defer fileCSV.Close()
+
+	r.statusMeas.AppendText(getInfo(fileCSV, freq)) // получаем мета-данные прибора и устанавливаем частоту
 
 	for i := 1; i <= r.totalCycles; i++ {
 		// Проверка отмены
@@ -148,7 +157,7 @@ func (r *MeasRun) runLoop(freq string) {
 		r.updateCycle(i, r.totalCycles)
 
 		// Выполнение измерения
-		if err := r.doMeas(); err != nil {
+		if err := r.doMeas(fileCSV); err != nil {
 			r.updateStatus(
 				fmt.Sprintf(
 					"Прервано на цикле %d/%d", i, r.totalCycles))
@@ -169,11 +178,11 @@ func (r *MeasRun) runLoop(freq string) {
 }
 
 // Выполняет измерение
-func (r *MeasRun) doMeas() error {
+func (r *MeasRun) doMeas(fileCSV *os.File) error {
 	done := make(chan struct{})
 	var result string
 	go func() {
-		result = r.meas(r.ctx, r.cycleMinutes)
+		result = r.meas(r.ctx, r.cycleMinutes, fileCSV)
 
 		select {
 		case <-r.ctx.Done():
@@ -199,7 +208,7 @@ func (r *MeasRun) doMeas() error {
 }
 
 // Запускает новый цикл измерений
-func (r *MeasRun) meas(ctx context.Context, m int) string {
+func (r *MeasRun) meas(ctx context.Context, m int, fileCSV *os.File) string {
 	s := time.Duration(m) * time.Second //TODO: заменить на минуты перед релизом
 
 	ticker := time.NewTicker(500 * time.Millisecond)
@@ -219,7 +228,7 @@ func (r *MeasRun) meas(ctx context.Context, m int) string {
 			r.updateProgress(progress)
 			if elapsed >= s {
 				r.updateProgress(100)
-				return getMeas() // выполняем измерение
+				return getMeas(fileCSV) // выполняем измерение
 			}
 			if progress%10 == 0 {
 				r.mw.Synchronize(func() {
