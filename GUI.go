@@ -259,7 +259,8 @@ func connectGUI(owner walk.Form, appIcon *walk.Icon) {
 
 func errGUI(inErr error) bool {
 	var (
-		statusCon       *walk.TextEdit
+		statusCon *walk.TextEdit
+		//setPortButton   *walk.PushButton
 		reconnectButton *walk.PushButton
 		doneButton      *walk.PushButton
 		dlg             *walk.Dialog
@@ -282,7 +283,12 @@ func errGUI(inErr error) bool {
 					defer log.Print("Переподключиться: ", time.Since(start))
 					log.Print("КНОПКА: Переподключиться")
 
-					err := statusCon.SetText(getPortsList())
+					err := statusCon.SetText("Переподключаюсь")
+					if err != nil {
+						log.Print(err)
+					}
+
+					err = statusCon.SetText(getPortsList())
 					if err != nil {
 						log.Print(err)
 					}

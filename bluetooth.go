@@ -3,6 +3,7 @@ package main
 import (
 	"errors"
 	"log"
+	"os"
 	"strconv"
 	"sync"
 	"time"
@@ -125,14 +126,80 @@ func btRead() (string, error) {
 
 // Открытие порта
 func openPort() error {
-	mode := &serial.Mode{BaudRate: 9600}
-	p, err := serial.Open("COM4", mode)
+	filePort, err := os.OpenFile("Port.txt", os.O_RDWR|os.O_CREATE, 0644)
 	if err != nil {
-		log.Print("openPort - serial.Open(\"COM4\", mode): ", err)
+		log.Print("opening filePort", err)
+		return err
 	}
-	port = p
-	D.Port = "COM4"
-	return err
+	defer func() {
+		if err := filePort.Close(); err != nil {
+			log.Print("closing filePort: ", err)
+		}
+	}()
+
+	var portNameB = make([]byte, 4)
+
+	_, err = filePort.Read(portNameB)
+	if err != nil {
+		log.Print("Reading filePort: ", err)
+	}
+
+	mode := &serial.Mode{BaudRate: 9600}
+	ch := make(chan serial.Port)
+
+	if portNameB != nil {
+		portName := string(portNameB)
+		log.Print("Opening port ", portName)
+		if err != nil {
+			return err
+		}
+		go func(mode *serial.Mode) {
+			p, err := serial.Open(portName, mode)
+			if err != nil {
+				log.Print("openPort - serial.Open("+portName+", mode): ", err)
+			}
+			ch <- p
+		}(mode)
+
+		select {
+		case p := <-ch:
+			port = p
+			D.Port = portName
+			return err
+		case <-time.After(1000 * time.Millisecond):
+			return errors.New("timeout opening port")
+		}
+	} else {
+		portNameCh := make(chan string)
+		ports, err := serial.GetPortsList()
+		if err != nil {
+			return err
+		}
+
+		for _, port := range ports {
+			go func(mode *serial.Mode) {
+				p, err := serial.Open(port, mode)
+				if err != nil {
+					log.Print("openPort - serial.Open("+port+", mode): ", err)
+				}
+				ch <- p
+				portNameCh <- port
+			}(mode)
+		}
+
+		select {
+		case p := <-ch:
+			portName := <-portNameCh
+			port = p // port - глобальная переменная
+			D.Port = portName
+
+			_, err = filePort.Write([]byte(portName))
+
+			return err
+		case <-time.After(1000 * time.Millisecond):
+			return errors.New("timeout opening port")
+		}
+	}
 }
 
 // Закрытие порта

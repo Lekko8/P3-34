@@ -135,7 +135,11 @@ func (r *MeasRun) runLoop(freq string) {
 	if err != nil {
 		log.Print("Не удалось создать CSV файл: ", err)
 	}
-	defer fileCSV.Close()
+	defer func() {
+		if err := fileCSV.Close(); err != nil {
+			log.Print(err)
+		}
+	}()
 
 	r.statusMeas.AppendText(getInfo(fileCSV, freq)) // получаем мета-данные прибора и устанавливаем частоту
 

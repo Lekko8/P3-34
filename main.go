@@ -26,7 +26,7 @@ var fileLog *os.File
 
 func main() {
 
-	logging()
+	logging() // если нет папки log у файла при запуске, то логи не будут выписываться
 
 	log.Print("Открыли)")
 
@@ -63,7 +63,8 @@ func logging() {
 
 	fileLog, err = os.OpenFile("log/"+time.Now().Format("02.01.2006_15.04_")+"P3-34.log", os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
 	if err != nil {
-		log.Panic("Не удалось открыть файл логов:", err)
+		log.Print("Не удалось открыть файл логов:", err)
+		return
 	}
 
 	_, _ = fileLog.Write([]byte{0xEF, 0xBB, 0xBF})
@@ -71,4 +72,5 @@ func logging() {
 	multiWriter := io.MultiWriter(os.Stdout, fileLog)
 
 	log.SetOutput(multiWriter)
+	log.Print("started logging")
 }
