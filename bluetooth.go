@@ -146,6 +146,7 @@ func openPort() error {
 
 	mode := &serial.Mode{BaudRate: 9600}
 	ch := make(chan serial.Port)
+	errChan := make(chan error, 1)
 
 	if portNameB != nil {
 		portName := string(portNameB)
@@ -156,12 +157,15 @@ func openPort() error {
 		go func(mode *serial.Mode) {
 			p, err := serial.Open(portName, mode)
 			if err != nil {
-				log.Print("openPort - serial.Open("+portName+", mode): ", err)
+				log.Print("go openPort - serial.Open("+portName+", mode): ", err)
+				errChan <- err
 			}
 			ch <- p
 		}(mode)
 
 		select {
+		case err := <-errChan:
+			return err
 		case p := <-ch:
 			port = p
 			D.Port = portName

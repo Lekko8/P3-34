@@ -5,6 +5,8 @@ import (
 	"io"
 	"log"
 	"os"
+	"path/filepath"
+	"strings"
 	"time"
 )
 
@@ -17,7 +19,15 @@ func createFile(filesFolder, order string) string {
 func newCSV(sampleName string) (*os.File, error) {
 	fileName := "P3_34_" + time.Now().Format("20060102_150405_") + sampleName + ".csv"
 
-	fileCSV, err := os.OpenFile(fileName, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0644)
+	folderPath := "P3-34 measurements/" + time.Now().Format("02012006")
+	err := os.MkdirAll(folderPath, 0755)
+	if err != nil {
+		log.Print(err)
+		return nil, err
+	}
+
+	filePath := filepath.Join(folderPath, fileName)
+	fileCSV, err := os.OpenFile(filePath, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0644)
 	if err != nil {
 		log.Print(err)
 		return nil, err
@@ -28,7 +38,7 @@ func newCSV(sampleName string) (*os.File, error) {
 	var s [][]string
 
 	s = append(s, []string{"P3-34 measurement log"},
-		[]string{"Started at", time.Now().Format("2006-01-02 15:04:05")},
+		[]string{"Started at", time.Now().Format("2006-01-02"), time.Now().Format("15:04:05")},
 		[]string{"Port", D.Port},
 		[]string{"Interval min", D.Interval},
 		[]string{"Frequency", D.Frequency},
@@ -54,4 +64,25 @@ func addToCSV(w io.Writer, data []string) {
 	}
 	log.Print("added to CSV: ", data)
 	writer.Flush()
+}
+
+func convMeasData(data string) string {
+	/*
+		структура данных:
+		 <S> = (1.53 � 0.84) uW/cm2  (P=0.95)
+		ready >>>
+		если разделим по пробелам, то получим
+		<S>|=|(1.53|�|0.84)|uW/cm2||(P=0.95)
+		ready >>>
+		нужно брать: [2], [4], [5], [7]?
+	*/
+	split := strings.Split(data, " ")
+
+	log.Printf("Длина %s: %v", split, len(split))
+
+	for i := range split {
+		log.Printf("№%v содержит: %s", i, split[i])
+	}
+
+	return data
 }

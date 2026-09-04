@@ -17,8 +17,8 @@ func getMeas(fileSCV *os.File) string {
 	)
 
 	ans = append(ans, time.Now().Format("15:04:05"))
-	ans = append(ans, get("MEAS:AVR"))
-	ans = append(ans, get("MEAS:MAX"))
+	ans = append(ans, convMeasData(get("MEAS:AVR")))
+	ans = append(ans, convMeasData(get("MEAS:MAX")))
 	go addToCSV(fileSCV, ans)
 	ans = append(ans, get("NEWMEAS"))
 
@@ -93,7 +93,7 @@ func get(this string) string {
 	ans := result.String()
 
 	log.Print("get [", this, "]: ", ans)
-	return "\n" + ans
+	return "\r\n" + ans // TODO: проверить перенос строки
 }
 
 // Проверяет соединение
