@@ -114,8 +114,9 @@ func GUI() {
 
 							filesFolder = inputWay.Text()
 							freq := inputFreq.Text()
+							//log.Print("FREQ: ", freq)
 
-							statusMeas.AppendText("Начать измерение")
+							statusMeas.AppendText("Начать измерение\r\n")
 
 							if runner == nil {
 								runner = NewMeasRun(

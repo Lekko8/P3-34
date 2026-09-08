@@ -43,6 +43,9 @@ func newCSV(sampleName string) (*os.File, error) {
 		[]string{"Interval min", D.Interval},
 		[]string{"Frequency", D.Frequency},
 		[]string{"Device ID", D.ID},
+		[]string{"Device Name", D.Name},
+		[]string{"Device Number", D.Number},
+		[]string{"Device Soft", D.Soft},
 		[]string{"Battery", D.Battery})
 
 	if err = w.WriteAll(s); err != nil {
@@ -71,6 +74,9 @@ func convMeasData(data string) string {
 		структура данных:
 		 <S> = (1.53 � 0.84) uW/cm2  (P=0.95)
 		ready >>>
+		либо:
+		Smax = (0.000 � 0.000) uW/cm2  (P=0.95)
+		ready >>>
 		если разделим по пробелам, то получим
 		<S>|=|(1.53|�|0.84)|uW/cm2||(P=0.95)
 		ready >>>
@@ -78,11 +84,21 @@ func convMeasData(data string) string {
 	*/
 	split := strings.Split(data, " ")
 
+	result := strings.Builder{}
+	result.WriteString(strings.Replace(split[2], "(", "", 1))
+	result.WriteString("±")
+	result.WriteString(strings.Replace(split[4], ")", "", 1))
+	result.WriteString(" ")
+	result.WriteString(strings.Replace(strings.Replace(split[5], "(P=", "", 1), ")\r\nready >>>", "", 1))
+	//result.WriteString("\r\n")
+
 	log.Printf("Длина %s: %v", split, len(split))
 
 	for i := range split {
 		log.Printf("№%v содержит: %s", i, split[i])
 	}
 
-	return data
+	log.Printf("result: %v", result.String())
+
+	return result.String()
 }

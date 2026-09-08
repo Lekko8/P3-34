@@ -1,10 +1,11 @@
 module P3-34
 
-go 1.26
+go 1.26.0
 
 require (
 	github.com/lxn/walk v0.0.0-20210112085537-c389da54e794
 	go.bug.st/serial v1.8.0
+	golang.org/x/sync v0.23.0
 )
 
 require (

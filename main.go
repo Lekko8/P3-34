@@ -14,6 +14,9 @@ type Data struct {
 	Interval  string
 	Frequency string
 	ID        string
+	Name      string
+	Number    string
+	Soft      string
 	Battery   string
 }
 
@@ -25,27 +28,36 @@ var fileLog *os.File
 //rsrc -ico icon.ico -manifest P3-34.manifest -o rsrc_windows_amd64.syso
 
 func main() {
-
 	logging() // если нет папки log у файла при запуске, то логи не будут выписываться
 
 	log.Print("Открыли)")
 
+	// Гарантируем закрытие лог-файла при выходе
+	defer func() {
+		if err := fileLog.Close(); err != nil {
+			log.Printf("Ошибка закрытия лог-файла: %v", err)
+		}
+		log.Print("Закрыли(")
+	}()
+
+	// Гарантируем закрытие порта при выходе
+	defer func() {
+		if err := closePort(); err != nil {
+			log.Printf("Ошибка закрытия порта: %v", err)
+		}
+	}()
+
+	// Открываем порт
 	err := openPort()
 	if err != nil {
+		log.Printf("Ошибка открытия порта: %v", err)
 		if errGUI(err) {
 			GUI()
 		}
 	} else {
+		log.Printf("Порт успешно открыт: %s", D.Port)
 		GUI()
 	}
-
-	log.Print("Закрыли(")
-
-	err = fileLog.Close()
-	if err != nil {
-		log.Print(err)
-	}
-
 }
 
 func getUserName() string {

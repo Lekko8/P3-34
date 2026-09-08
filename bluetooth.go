@@ -1,217 +1,329 @@
 package main
 
 import (
+	"context"
 	"errors"
+	"fmt"
+	"io"
 	"log"
 	"os"
-	"strconv"
+	"strings"
 	"sync"
 	"time"
 
 	"go.bug.st/serial"
+	"golang.org/x/sync/errgroup"
 )
 
 var (
 	port   serial.Port
-	portMu sync.Mutex
+	portMu sync.RWMutex
+)
+
+const (
+	portFile     = "Port.txt"
+	testMessage  = "TEST"
+	testResponse = "OK" // Предполагаемый ответ на тестовое сообщение
+	openTimeout  = 3 * time.Second
+	readTimeout  = 500 * time.Millisecond
+	writeTimeout = 1 * time.Second
 )
 
 // Отправляет сообщение по открытому коннекту
 func btWrite(message string) error {
+	portMu.RLock()
+	currentPort := port
+	portMu.RUnlock()
 
-	if port == nil {
+	if currentPort == nil {
 		return errors.New("port not initialized")
 	}
 
+	ctx, cancel := context.WithTimeout(context.Background(), writeTimeout)
+	defer cancel()
+
 	errChan := make(chan error, 1)
 	go func() {
-		_, err := port.Write([]byte(message + "\r\n"))
+		_, err := currentPort.Write([]byte(message + "\r\n"))
 		errChan <- err
 	}()
 
 	select {
 	case err := <-errChan:
-		//log.Print("btWrite: ", err)
 		return err
-	case <-time.After(1200 * time.Millisecond):
-		log.Print("btWrite: timeout")
+	case <-ctx.Done():
 		return errors.New("timeout of writing in port")
+	}
+}
+
+// Общая функция чтения ответа от устройства
+func readResponse(p serial.Port) (string, error) {
+	var answer strings.Builder
+	buffer := make([]byte, 2048)
+	const EOT = 0x04
+
+	for {
+		if err := p.SetReadTimeout(readTimeout); err != nil {
+			return answer.String(), err
+		}
+
+		n, err := p.Read(buffer)
+		if err != nil {
+			if err.Error() == "i/o timeout" || err == io.EOF {
+				return answer.String(), nil
+			}
+			return answer.String(), err
+		}
+
+		if n > 0 {
+			// Ищем EOT в полученных данных
+			data := buffer[:n]
+			if idx := strings.IndexByte(string(data), EOT); idx >= 0 {
+				// Нашли EOT - добавляем данные до него и выходим
+				answer.Write(data[:idx])
+				return answer.String(), nil
+			}
+
+			// EOT не найден - добавляем все данные
+			answer.Write(data)
+		}
 	}
 }
 
 // Читает сообщение
 func btRead() (string, error) {
+	portMu.RLock()
+	currentPort := port
+	portMu.RUnlock()
+
+	if currentPort == nil {
+		return "", errors.New("port not initialized")
+	}
+
 	start := time.Now()
 	defer log.Print("btRead()", time.Since(start))
 
-	var answer []byte // Используем []byte для эффективности
-	buffer := make([]byte, 2048)
-	const EOT = 0x04
+	return readResponse(currentPort)
+}
 
-	for {
-		if err := port.SetReadTimeout(100 * time.Millisecond); err != nil {
-			return "", err
+// Проверяет, является ли порт целевым устройством
+func isTargetDevice(p serial.Port, portName string) bool {
+	// Отправляем тестовое сообщение
+	if _, err := p.Write([]byte(testMessage + "\r\n")); err != nil {
+		log.Printf("Write TEST to %s: %v", portName, err)
+		return false
+	}
+
+	// Читаем весь ответ
+	response, err := readResponse(p)
+	if err != nil {
+		log.Printf("Read response from %s: %v", portName, err)
+		return false
+	}
+
+	log.Printf("Port %s response: %q", portName, response)
+
+	// Проверяем ответ
+	return response != "" &&
+		(strings.Contains(response, "ready >>>") || strings.Contains(response, testResponse))
+}
+
+// Открытие порта с поиском целевого устройства
+func openPort() error {
+	portMu.Lock()
+	defer portMu.Unlock()
+
+	// Закрываем текущий порт, если он открыт
+	if port != nil {
+		log.Printf("Closing existing port before reopening")
+		if err := port.Close(); err != nil {
+			log.Printf("Error closing existing port: %v", err)
 		}
+		port = nil
+	}
 
-		n, err := port.Read(buffer)
-		if err != nil {
-			if err.Error() == "i/o timeout" {
-				return string(answer), nil
+	// Пробуем открыть сохраненный порт
+	if savedPort, err := readSavedPort(); err == nil && savedPort != "" {
+		log.Printf("Trying saved port: %s", savedPort)
+		if p, err := tryOpenPort(savedPort); err == nil {
+			if isTargetDevice(p, savedPort) {
+				port = p
+				D.Port = savedPort
+				log.Printf("Successfully connected to saved port: %s", savedPort)
+				return nil
 			}
-			return "", err
+			p.Close()
+			log.Printf("Saved port %s is not target device", savedPort)
 		}
+	}
 
-		if n > 0 {
-			// Ищем EOT в полученных данных
-			eotIndex := -1
-			for i := range n {
-				if buffer[i] == EOT {
-					eotIndex = i
-					break
-				}
-			}
+	// Сканируем все порты
+	return scanPorts()
+}
 
-			if eotIndex >= 0 {
-				// Нашли EOT - добавляем данные до него и выходим
-				answer = append(answer, buffer[:eotIndex]...)
-				return string(answer), nil
-			}
+// Пытается открыть конкретный порт
+func tryOpenPort(portName string) (serial.Port, error) {
+	mode := &serial.Mode{
+		BaudRate: 9600,
+		DataBits: 8,
+		StopBits: serial.OneStopBit,
+		Parity:   serial.NoParity,
+	}
 
-			// EOT не найден - добавляем все данные
-			answer = append(answer, buffer[:n]...)
-		}
+	ctx, cancel := context.WithTimeout(context.Background(), openTimeout)
+	defer cancel()
+
+	resultCh := make(chan struct {
+		p   serial.Port
+		err error
+	}, 1)
+
+	go func() {
+		p, err := serial.Open(portName, mode)
+		resultCh <- struct {
+			p   serial.Port
+			err error
+		}{p, err}
+	}()
+
+	select {
+	case <-ctx.Done():
+		return nil, fmt.Errorf("timeout opening port %s", portName)
+	case result := <-resultCh:
+		return result.p, result.err
 	}
 }
 
-//func btRead() (string, error) {
-//
-//	start := time.Now()
-//	defer log.Print("btRead()", time.Since(start))
-//
-//	//err := port.SetReadTimeout(2 * time.Second)
-//	//if err != nil {
-//	//	log.Print("connectBt.SetReadTimeout: ", err)
-//	//}
-//
-//	var answer strings.Builder
-//	ticker := time.NewTicker(100 * time.Millisecond)
-//	defer ticker.Stop()
-//
-//	for {
-//		data := make([]byte, 2048)
-//		done := make(chan struct{})
-//		var n int
-//		var goerr error
-//
-//		go func() {
-//			n, goerr = port.Read(data)
-//			close(done)
-//		}()
-//
-//		select {
-//		case <-done:
-//			if goerr != nil {
-//				return answer.String(), goerr
-//			}
-//			// strings.Split(string(data[:n]), "EOT")[0]
-//			answer.Write(data[:n])
-//			//return answer.String(), nil
-//		case <-ticker.C:
-//			log.Print("btRead: timeout")
-//			return answer.String(), nil
-//			//return "Таймаут чтения", errors.New("timeout of reading from port")
-//		}
-//	}
-//}
-
-// Открытие порта
-func openPort() error {
-	filePort, err := os.OpenFile("Port.txt", os.O_RDWR|os.O_CREATE, 0644)
+// Сканирует все доступные порты
+func scanPorts() error {
+	ports, err := serial.GetPortsList()
 	if err != nil {
-		log.Print("opening filePort", err)
-		return err
+		return fmt.Errorf("getting ports list: %w", err)
 	}
-	defer func() {
-		if err := filePort.Close(); err != nil {
-			log.Print("closing filePort: ", err)
-		}
+
+	if len(ports) == 0 {
+		return errors.New("no serial ports found")
+	}
+
+	log.Printf("Found %d ports: %v", len(ports), ports)
+
+	ctx, cancel := context.WithTimeout(context.Background(), openTimeout*2)
+	defer cancel()
+
+	g, ctx := errgroup.WithContext(ctx)
+	foundCh := make(chan struct {
+		p        serial.Port
+		portName string
+	}, 1)
+
+	// Канал для отслеживания найденного порта
+	found := make(chan struct{})
+	var foundOnce sync.Once
+
+	for _, portName := range ports {
+		portName := portName // захват переменной
+
+		g.Go(func() error {
+			// Проверяем, не найден ли уже порт
+			select {
+			case <-ctx.Done():
+				return nil
+			case <-found:
+				return nil
+			default:
+			}
+
+			log.Printf("Scanning port: %s", portName)
+			p, err := tryOpenPort(portName)
+			if err != nil {
+				log.Printf("Cannot open port %s: %v", portName, err)
+				return nil
+			}
+
+			// Гарантируем закрытие порта, если он не целевой
+			defer func() {
+				if p != nil {
+					p.Close()
+					log.Printf("Closed port %s after scanning", portName)
+				}
+			}()
+
+			if isTargetDevice(p, portName) {
+				foundOnce.Do(func() {
+					close(found)
+					select {
+					case foundCh <- struct {
+						p        serial.Port
+						portName string
+					}{p, portName}:
+						log.Printf("Target device found on port: %s", portName)
+						p = nil // Предотвращаем закрытие в defer
+					default:
+						log.Printf("Found channel is full, closing port %s", portName)
+					}
+				})
+			}
+
+			return nil
+		})
+	}
+
+	// Ждем завершения всех горутин
+	go func() {
+		g.Wait()
+		close(foundCh)
 	}()
 
-	var portNameB = make([]byte, 4)
+	// Ждем результат
+	select {
+	case result, ok := <-foundCh:
+		if !ok {
+			return errors.New("target device not found")
+		}
+		port = result.p
+		D.Port = result.portName
 
-	_, err = filePort.Read(portNameB)
+		// Сохраняем найденный порт
+		if err := savePortName(result.portName); err != nil {
+			log.Printf("Cannot save port name: %v", err)
+		}
+
+		log.Printf("Successfully connected to port: %s", result.portName)
+		return nil
+
+	case <-ctx.Done():
+		return errors.New("timeout scanning ports")
+	}
+}
+
+// Читает сохраненное имя порта
+func readSavedPort() (string, error) {
+	data, err := os.ReadFile(portFile)
 	if err != nil {
-		log.Print("Reading filePort: ", err)
+		return "", err
 	}
 
-	mode := &serial.Mode{BaudRate: 9600}
-	ch := make(chan serial.Port)
-	errChan := make(chan error, 1)
-
-	if portNameB != nil {
-		portName := string(portNameB)
-		log.Print("Opening port ", portName)
-		if err != nil {
-			return err
-		}
-		go func(mode *serial.Mode) {
-			p, err := serial.Open(portName, mode)
-			if err != nil {
-				log.Print("go openPort - serial.Open("+portName+", mode): ", err)
-				errChan <- err
-			}
-			ch <- p
-		}(mode)
-
-		select {
-		case err := <-errChan:
-			return err
-		case p := <-ch:
-			port = p
-			D.Port = portName
-			return err
-		case <-time.After(1000 * time.Millisecond):
-			return errors.New("timeout opening port")
-		}
-	} else {
-		portNameCh := make(chan string)
-		ports, err := serial.GetPortsList()
-		if err != nil {
-			return err
-		}
-
-		for _, port := range ports {
-			go func(mode *serial.Mode) {
-				p, err := serial.Open(port, mode)
-				if err != nil {
-					log.Print("openPort - serial.Open("+port+", mode): ", err)
-				}
-				ch <- p
-				portNameCh <- port
-			}(mode)
-		}
-
-		select {
-		case p := <-ch:
-			portName := <-portNameCh
-			port = p // port - глобальная переменная
-			D.Port = portName
-
-			_, err = filePort.Write([]byte(portName))
-
-			return err
-		case <-time.After(1000 * time.Millisecond):
-			return errors.New("timeout opening port")
-		}
+	portName := strings.TrimSpace(string(data))
+	if portName == "" {
+		return "", errors.New("empty port name")
 	}
+
+	return portName, nil
+}
+
+// Сохраняет имя порта
+func savePortName(portName string) error {
+	return os.WriteFile(portFile, []byte(portName), 0644)
 }
 
 // Закрытие порта
 func closePort() error {
 	portMu.Lock()
 	defer portMu.Unlock()
+
 	if port != nil {
 		err := port.Close()
+		port = nil
 		if err != nil {
 			log.Print("closePort: ", err)
 		}
@@ -222,25 +334,23 @@ func closePort() error {
 
 // Перезапуск порта
 func reconnectPort() error {
-	portMu.Lock()
-	defer portMu.Unlock()
-	log.Print("reconnecting port: ", port)
-	if port != nil {
-		err := port.Close()
-		if err != nil {
-			log.Print("port.Close(): ", err)
-		}
-		port = nil
+	log.Print("Starting port reconnection...")
+
+	// Закрываем текущий порт
+	if err := closePort(); err != nil {
+		log.Printf("Error closing port during reconnect: %v", err)
 	}
-	portMu.Unlock()
-	time.Sleep(800 * time.Millisecond)
-	portMu.Lock()
-	err := openPort()
-	log.Print("reconnected port: ", port)
-	if err != nil {
-		log.Print("openPort(): ", err)
+
+	// Ждем, пока порт полностью освободится
+	time.Sleep(1 * time.Second)
+
+	// Открываем порт заново
+	if err := openPort(); err != nil {
+		log.Printf("Error opening port during reconnect: %v", err)
 		return err
 	}
+
+	log.Printf("Port reconnected successfully: %s", D.Port)
 	return nil
 }
 
@@ -252,15 +362,21 @@ func getPortsList() string {
 	ports, err := serial.GetPortsList()
 	if err != nil {
 		log.Print("getPortsList: ", err)
+		return "Ошибка получения списка портов"
 	}
-	if len(ports) != 0 {
-		var portList string
-		for _, port := range ports {
-			portList = portList + "\r\n" + port
-			log.Println("getPortsList: ", port)
-		}
 
-		return "Портов: " + strconv.Itoa(len(ports)) + "\n\r" + portList
+	if len(ports) == 0 {
+		return "Порты не найдены, проверьте соединение с P3-34"
 	}
-	return "Порты не найдены, проверьте соединение с P3-34"
+
+	var builder strings.Builder
+	builder.WriteString(fmt.Sprintf("Портов: %d\r\n", len(ports)))
+
+	for _, portName := range ports {
+		builder.WriteString("\r\n")
+		builder.WriteString(portName)
+		log.Println("getPortsList: ", portName)
+	}
+
+	return builder.String()
 }
