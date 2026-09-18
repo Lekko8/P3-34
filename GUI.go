@@ -83,7 +83,7 @@ func GUI() {
 					LineEdit{
 						AssignTo: &inputName,
 						MaxSize:  Size{Width: 50, Height: 0},
-						Text:     "И",
+						Text:     "I",
 					},
 					Label{Text: "Номер заказа:"},
 					LineEdit{
@@ -114,6 +114,7 @@ func GUI() {
 
 							filesFolder = inputWay.Text()
 							freq := inputFreq.Text()
+							D.Order = inputOrder.Text()
 							//log.Print("FREQ: ", freq)
 
 							statusMeas.AppendText("Начать измерение\r\n")
@@ -122,7 +123,7 @@ func GUI() {
 								runner = NewMeasRun(
 									statusLabel, statusMeas,
 									progressBar, initButton,
-									inputName, mw)
+									inputName, filesFolder, mw)
 							}
 
 							if runner.isWorking {
@@ -159,7 +160,7 @@ func GUI() {
 							order := inputOrder.Text()
 
 							err := statusLabel.SetText(
-								"Записано в " + createFile(filesFolder, order))
+								"Записано в " + xlsx(filesFolder, order))
 							if err != nil {
 								log.Print(err)
 							}

@@ -27,6 +27,7 @@ type MeasRun struct {
 	progressBar *walk.ProgressBar
 	initButton  *walk.PushButton
 	inputName   *walk.LineEdit
+	filesFolder string
 	mw          *walk.MainWindow
 }
 
@@ -36,6 +37,7 @@ func NewMeasRun(
 	progressBar *walk.ProgressBar,
 	initButton *walk.PushButton,
 	inputName *walk.LineEdit,
+	filesFolder string,
 	mw *walk.MainWindow) *MeasRun {
 
 	return &MeasRun{
@@ -44,6 +46,7 @@ func NewMeasRun(
 		progressBar: progressBar,
 		initButton:  initButton,
 		inputName:   inputName,
+		filesFolder: filesFolder,
 		mw:          mw,
 	}
 }
@@ -213,7 +216,7 @@ func (r *MeasRun) doMeas(fileCSV *os.File) error {
 
 // Запускает новый цикл измерений
 func (r *MeasRun) meas(ctx context.Context, m int, fileCSV *os.File) string {
-	s := time.Duration(m) * time.Second //TODO: заменить на минуты перед релизом
+	s := time.Duration(m) * time.Minute
 
 	ticker := time.NewTicker(500 * time.Millisecond)
 	defer ticker.Stop()

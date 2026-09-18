@@ -10,6 +10,7 @@ import (
 )
 
 type Data struct {
+	Order     string
 	Port      string
 	Interval  string
 	Frequency string
@@ -20,9 +21,11 @@ type Data struct {
 	Battery   string
 }
 
-var D = &Data{}
-var filesFolder = "C:\\Users\\" + getUserName() + "\\Desktop\\p3-34\\P3-34 measurements"
-var fileLog *os.File
+var (
+	D           = &Data{}
+	filesFolder = "C:\\Users\\" + getUserName() + "\\Desktop\\p3-34\\P3-34 measurements\\" + time.Now().Format("02012006")
+	fileLog     *os.File
+)
 
 //rsrc -manifest P3-34.manifest -o rsrc.syso
 //rsrc -ico icon.ico -manifest P3-34.manifest -o rsrc_windows_amd64.syso
