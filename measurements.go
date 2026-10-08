@@ -4,12 +4,13 @@ import (
 	"io"
 	"log"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 )
 
 // Проводит измерение
-func getMeas(fileSCV *os.File) string {
+func getMeas(fileSCV *os.File, borderNum float32) string {
 
 	var (
 		result = strings.Builder{}
@@ -19,13 +20,33 @@ func getMeas(fileSCV *os.File) string {
 
 	//ans = append(ans, time.Now().Format("15:04:05"))
 	measAvr := convMeasData(get("MEAS:AVR"))
+	tempAvg, err := strconv.ParseFloat(strings.Split(measAvr, "±")[0], 32)
+	if err != nil {
+		log.Println("Parsing error: ", err)
+	}
+
+	for float32(tempAvg) < borderNum {
+		log.Println("tempAvg < borderNum:", tempAvg)
+
+		measAvr = convMeasData(get("MEAS:AVR"))
+
+		tempAvg, err = strconv.ParseFloat(strings.Split(measAvr, "±")[0], 32)
+		if err != nil {
+			log.Println("Parsing error: ", err)
+		}
+	}
+
 	ans = append(ans, measAvr)
 	meas = append(meas, measAvr)
 	ans = append(ans, "\r\n")
+
 	measMax := convMeasData(get("MEAS:MAX"))
+
 	ans = append(ans, measMax)
 	meas = append(meas, measMax)
+
 	go addToCSV(fileSCV, meas)
+
 	ans = append(ans, get("NEWMEAS"))
 
 	for _, res := range ans {
@@ -55,23 +76,17 @@ func getInfo(freq string) string {
 	*/
 
 	info := get("?")
-	//log.Print("tempD: ", info)
 	infoSplit := strings.Split(info, "\r\n")
 	D.ID = strings.Split(infoSplit[1], " ")[1]
-	//log.Printf("Кладу в D.ID: %v", D.ID)
 	ans = append(ans, infoSplit[1])
 	D.Name = strings.Split(infoSplit[2], " ")[1]
-	//log.Printf("Кладу в D.Name: %v", D.Name)
 	ans = append(ans, infoSplit[2])
 	D.Number = strings.Split(infoSplit[3], " ")[1]
-	//log.Printf("Кладу в D.Number: %v", D.Number)
 	ans = append(ans, infoSplit[3])
 	D.Soft = strings.Split(infoSplit[4], " ")[1]
-	//log.Printf("Кладу в D.Soft: %v", D.Soft)
 	ans = append(ans, infoSplit[4])
 	D.Battery = infoSplit[5]
 	ans = append(ans, infoSplit[5])
-	//log.Printf("Кладу в D.Battery: %v", D.Battery)
 	/*
 		for i, t := range infoSplit {
 			if i == 0 || i == 7 {
@@ -91,12 +106,10 @@ func getInfo(freq string) string {
 
 			ans = append(ans, D.ID)
 			log.Print("result.WriteString(get(\"?\")) - ", D.ID)
-			time.Sleep(10 * time.Millisecond)
 
 			D.Battery = get("UBATT")
 			ans = append(ans, D.Battery)
 			log.Print("result.WriteString(get(\"UBATT\")) - ", D.Battery)
-			time.Sleep(10 * time.Millisecond)
 	*/
 	D.Frequency = " "
 	log.Print("freq in meas func: ", freq)
@@ -106,20 +119,16 @@ func getInfo(freq string) string {
 		frequency := get("FREQ:" + strings.Replace(freq, ",", ".", 1))
 		ans = append(ans, strings.TrimSuffix(frequency, "ready >>>"))
 		log.Print("result.WriteString(get(\"FREQ\")) - ", frequency)
-		//time.Sleep(10 * time.Millisecond)
 	}
 
 	ans = append(ans, get("NEWMEAS"))
 
-	//result.WriteString(time.Now().Format("20060102_150405"))
 	result.WriteString("\r\n")
 
 	for _, res := range ans {
 		result.WriteString(res)
 		result.WriteString("\r\n")
 	}
-
-	//go addToCSV(fileSCV, ans)
 
 	return strings.TrimSuffix(result.String(), "ready >>>\r\n") + "\r\n"
 }

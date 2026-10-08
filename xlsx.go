@@ -32,7 +32,7 @@ func xlsx(filesFolder, orderName string) string {
 
 // Создаёт новый CSV
 func newCSV(sampleName string) (*os.File, error) {
-	fileName := "P3_34_" + time.Now().Format("20060102_150405_") + sampleName + ".csv"
+	fileName := fmt.Sprintf("P3_34_%s_%s.csv", time.Now().Format("20060102_150405"), sampleName)
 
 	folderPath := "P3-34 measurements/" + time.Now().Format("02012006")
 	err := os.MkdirAll(folderPath, 0755)
@@ -53,7 +53,7 @@ func newCSV(sampleName string) (*os.File, error) {
 	var s [][]string
 
 	s = append(s,
-		[]string{"P3-34 measurement log"},
+		[]string{"P3-34 measurement"},
 		[]string{"Started at", time.Now().Format("2006-01-02"), time.Now().Format("15:04:05")},
 		[]string{"Port", D.Port},
 		[]string{"Interval min", D.Interval},
@@ -65,7 +65,7 @@ func newCSV(sampleName string) (*os.File, error) {
 		[]string{"Battery", D.Battery},
 		[]string{"Order", D.Order},
 		[]string{"Sample", sampleName},
-		[]string{"Time", "Avr meas", "Avr err", "Max meas", "Max err"})
+		[]string{"Time", "Avg meas", "Avg err", "Max meas", "Max err"})
 
 	if err = w.WriteAll(s); err != nil {
 		return nil, err
@@ -85,7 +85,9 @@ func addToCSV(w io.Writer, data []string) {
 	result = append(result, time.Now().Format("15:04:05"))
 
 	for _, value := range data {
-		result = append(result, strings.Split(strings.TrimSpace(strings.TrimSuffix(value, " uW/cm2")), "±")...)
+		result = append(result, strings.Split(
+			strings.TrimSpace(
+				strings.TrimSuffix(value, " uW/cm2")), "±")...)
 	}
 
 	//0.7640.421
@@ -122,7 +124,9 @@ func convMeasData(data string) string {
 	result.WriteString("±")
 	result.WriteString(strings.Replace(split[4], ")", "", 1))
 	result.WriteString(" ")
-	result.WriteString(strings.Replace(strings.Replace(split[5], "(P=", "", 1), ")\r\nready >>>", "", 1))
+	result.WriteString(strings.Replace(
+		strings.Replace(
+			split[5], "(P=", "", 1), ")\r\nready >>>", "", 1))
 	//result.WriteString("\r\n")
 
 	/*
@@ -176,7 +180,8 @@ func createFile(listOfFiles []FileWData, results []FinalData, filesFolder, order
 		return err.Error()
 	}
 
-	for idx := range listOfFiles { // создание листов с сырыми данными
+	// создание листов с сырыми данными
+	for idx := range listOfFiles {
 		index, err := f.NewSheet(listOfFiles[idx].sample)
 		if err != nil {
 			log.Printf("Ошибка создания листа %s: %v", listOfFiles[idx].sample, err)
@@ -213,16 +218,8 @@ func createFile(listOfFiles []FileWData, results []FinalData, filesFolder, order
 				}
 			}
 		}
-		//err = f.SetCellValue(listOfFiles[idx].sample, "F1", order) // вставка номера заказа
-		//if err != nil {
-		//	log.Print(err)
-		//}
-		//err = f.SetCellValue(listOfFiles[idx].sample, "G1", listOfFiles[idx].sample) // вставка имени образца
-		//if err != nil {
-		//	log.Print(err)
-		//}
 
-		f.SetActiveSheet(index) // активация листа
+		f.SetActiveSheet(index)
 
 		err = csvFile.Close()
 		if err != nil {
@@ -235,28 +232,31 @@ func createFile(listOfFiles []FileWData, results []FinalData, filesFolder, order
 			fmt.Println("Ошибка при применении стиля к столбцу:", err)
 			return err.Error()
 		}
-		for row := 10; row <= 42; row++ {
-			for col := 4; col <= 7; col++ {
+		for row := 10; row <= 87; row++ {
+			for col := 2; col <= 5; col++ {
 				cell, _ := excelize.CoordinatesToCellName(col, row)
 
 				if val, _ := f.GetCellValue(sheetName, cell); val != "" {
-					if num, err := strconv.ParseFloat(strings.ReplaceAll(val, ",", "."), 64); err == nil {
+					if num, err := strconv.ParseFloat(
+						strings.ReplaceAll(val, ",", "."), 64); err == nil {
+
 						err = f.SetCellValue(sheetName, cell, num)
 						if err != nil {
 							log.Print(err)
 						}
-						err = f.SetCellStyle(sheetName, "D12", "G42", numberStyle)
-						if err != nil {
-							log.Print(err)
-						}
+						//err = f.SetCellStyle(sheetName, "D12", "G42", numberStyle)
+						//if err != nil {
+						//	log.Print(err)
+						//}
 
 					}
 				}
 			}
 		}
-		err = f.SetCellStyle(sheetName, "D12", "G42", numberStyle)
+		err = f.SetColStyle(sheetName, "A:E", numberStyle)
+		err = f.SetColStyle(sheetName, "B", boldStyle)
 		err = f.SetColStyle(sheetName, "D", boldStyle)
-		err = f.SetColStyle(sheetName, "F", boldStyle)
+		err = f.SetColWidth(sheetName, "A", "A", 16.13)
 	}
 
 	index, err := f.NewSheet("Результат")
@@ -321,15 +321,16 @@ func createFile(listOfFiles []FileWData, results []FinalData, filesFolder, order
 		fmt.Println("Ошибка применения стиля:", err)
 		return err.Error()
 	}
-	f.SetActiveSheet(index)       // активация листа
-	err = f.DeleteSheet("Sheet1") // удаление лишнего листа появившегося при создании файла
+	f.SetActiveSheet(index)
+	err = f.DeleteSheet("Sheet1")
 	if err != nil {
 		log.Print(err)
 	}
-	err = f.SaveAs("Результаты " + order + " за " + time.Now().Format("02012006") + ".xlsx") // сохранение файла
+	fileName := fmt.Sprintf("Результаты %s за %s.xlsx", order, time.Now().Format("02012006"))
+	err = f.SaveAs(fileName)
 	if err != nil {
 		log.Print(err)
 	}
 
-	return "Имя файла в " + filesFolder + "\r\nЗаказ " + order
+	return fmt.Sprintf("%s Заказ %s", fileName, order)
 }

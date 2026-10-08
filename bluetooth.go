@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"context"
 	"errors"
 	"fmt"
@@ -21,7 +22,6 @@ var (
 )
 
 const (
-	portFile     = "Port.txt"
 	testMessage  = "TEST"
 	testResponse = "OK" // Предполагаемый ответ на тестовое сообщение
 	openTimeout  = 3 * time.Second
@@ -100,8 +100,8 @@ func btRead() (string, error) {
 		return "", errors.New("port not initialized")
 	}
 
-	start := time.Now()
-	defer log.Print("btRead()", time.Since(start))
+	//start := time.Now()
+	//defer log.Print("btRead()", time.Since(start))
 
 	return readResponse(currentPort)
 }
@@ -152,7 +152,9 @@ func openPort() error {
 				log.Printf("Successfully connected to saved port: %s", savedPort)
 				return nil
 			}
-			p.Close()
+			if err = p.Close(); err != nil {
+				log.Printf("Error closing saved port: %v", err)
+			}
 			log.Printf("Saved port %s is not target device", savedPort)
 		}
 	}
@@ -221,7 +223,6 @@ func scanPorts() error {
 	var foundOnce sync.Once
 
 	for _, portName := range ports {
-		portName := portName // захват переменной
 
 		g.Go(func() error {
 			// Проверяем, не найден ли уже порт
@@ -243,7 +244,9 @@ func scanPorts() error {
 			// Гарантируем закрытие порта, если он не целевой
 			defer func() {
 				if p != nil {
-					p.Close()
+					if err := p.Close(); err != nil {
+						log.Printf("Error closing port: %v", err)
+					}
 					log.Printf("Closed port %s after scanning", portName)
 				}
 			}()
@@ -270,7 +273,9 @@ func scanPorts() error {
 
 	// Ждем завершения всех горутин
 	go func() {
-		g.Wait()
+		if err := g.Wait(); err != nil {
+			log.Printf("Error scanning ports: %v", err)
+		}
 		close(foundCh)
 	}()
 
@@ -284,9 +289,9 @@ func scanPorts() error {
 		D.Port = result.portName
 
 		// Сохраняем найденный порт
-		if err := savePortName(result.portName); err != nil {
-			log.Printf("Cannot save port name: %v", err)
-		}
+		//if err := savePortName(result.portName); err != nil {
+		//	log.Printf("Cannot save port name: %v", err)
+		//}
 
 		log.Printf("Successfully connected to port: %s", result.portName)
 		return nil
@@ -297,24 +302,50 @@ func scanPorts() error {
 }
 
 // Читает сохраненное имя порта
+//func readSavedPort() (string, error) {
+//
+//	if fileExists(settingsFileName) {
+//		log.Printf("Saved port not found")
+//		data, err := os.ReadFile(settingsFileName)
+//		if err != nil {
+//			return "", err
+//		}
+//
+//		portName := strings.TrimSpace(string(data))
+//		if portName == "" {
+//			return "", errors.New("empty port name")
+//		}
+//
+//		return portName, nil
+//	}
+//
+//	return "", nil
+//}
+
 func readSavedPort() (string, error) {
-	data, err := os.ReadFile(portFile)
+	f, err := os.Open(settingsFileName)
 	if err != nil {
 		return "", err
 	}
+	defer func() {
+		if err := f.Close(); err != nil {
+			log.Printf("Error closing saved port: %v", err)
+		}
+	}()
 
-	portName := strings.TrimSpace(string(data))
+	scanner := bufio.NewScanner(f)
+	scanner.Scan()
+	portName := strings.TrimSpace(scanner.Text())
 	if portName == "" {
 		return "", errors.New("empty port name")
 	}
-
 	return portName, nil
 }
 
 // Сохраняет имя порта
-func savePortName(portName string) error {
-	return os.WriteFile(portFile, []byte(portName), 0644)
-}
+//func savePortName(portName string) error {
+//	return os.WriteFile(portFile, []byte(portName), 0644)
+//}
 
 // Закрытие порта
 func closePort() error {

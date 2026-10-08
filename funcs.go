@@ -83,7 +83,7 @@ func (r *MeasRun) stop() {
 }
 
 // Запускает измерение
-func (r *MeasRun) run(totalCycles, cycleMinutes int, freq string) {
+func (r *MeasRun) run(totalCycles, cycleMinutes int, freq string, borderNum float32) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
@@ -114,11 +114,11 @@ func (r *MeasRun) run(totalCycles, cycleMinutes int, freq string) {
 		r.progressBar.SetValue(0)
 	})
 
-	go r.runLoop(freq)
+	go r.runLoop(freq, borderNum)
 }
 
 // Запускает цикл
-func (r *MeasRun) runLoop(freq string) {
+func (r *MeasRun) runLoop(freq string, borderNum float32) {
 	defer r.wg.Done()
 	defer func() {
 		r.mu.Lock()
@@ -164,7 +164,7 @@ func (r *MeasRun) runLoop(freq string) {
 		r.updateCycle(i, r.totalCycles)
 
 		// Выполнение измерения
-		if err := r.doMeas(fileCSV); err != nil {
+		if err := r.doMeas(fileCSV, borderNum); err != nil {
 			r.updateStatus(
 				fmt.Sprintf(
 					"Прервано на цикле %d/%d", i, r.totalCycles))
@@ -185,11 +185,11 @@ func (r *MeasRun) runLoop(freq string) {
 }
 
 // Выполняет измерение
-func (r *MeasRun) doMeas(fileCSV *os.File) error {
+func (r *MeasRun) doMeas(fileCSV *os.File, borderNum float32) error {
 	done := make(chan struct{})
 	var result string
 	go func() {
-		result = r.meas(r.ctx, r.cycleMinutes, fileCSV)
+		result = r.meas(r.ctx, r.cycleMinutes, fileCSV, borderNum)
 
 		select {
 		case <-r.ctx.Done():
@@ -215,7 +215,7 @@ func (r *MeasRun) doMeas(fileCSV *os.File) error {
 }
 
 // Запускает новый цикл измерений
-func (r *MeasRun) meas(ctx context.Context, m int, fileCSV *os.File) string {
+func (r *MeasRun) meas(ctx context.Context, m int, fileCSV *os.File, borderNum float32) string {
 	s := time.Duration(m) * time.Minute
 
 	ticker := time.NewTicker(500 * time.Millisecond)
@@ -235,7 +235,7 @@ func (r *MeasRun) meas(ctx context.Context, m int, fileCSV *os.File) string {
 			r.updateProgress(progress)
 			if elapsed >= s {
 				r.updateProgress(100)
-				return getMeas(fileCSV) // выполняем измерение
+				return getMeas(fileCSV, borderNum) // выполняем измерение
 			}
 			if progress%10 == 0 {
 				r.mw.Synchronize(func() {

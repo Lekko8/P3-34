@@ -3,13 +3,14 @@ package main
 import (
 	"log"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/lxn/walk"
 	. "github.com/lxn/walk/declarative"
 )
 
-func GUI() {
+func GUI(s *Settings) {
 	var (
 		inputWay    *walk.LineEdit
 		inputCount  *walk.LineEdit
@@ -17,19 +18,21 @@ func GUI() {
 		inputName   *walk.LineEdit
 		inputOrder  *walk.LineEdit
 		inputFreq   *walk.LineEdit
+		inputBorder *walk.LineEdit
 		statusMeas  *walk.TextEdit
 		statusLabel *walk.Label
 		progressBar *walk.ProgressBar
 		initButton  *walk.PushButton
 		mw          *walk.MainWindow
 		runner      *MeasRun
+		err         error
 	)
 
 	appIcon, _ := walk.NewIconFromResourceId(2)
 
 	mainWindow := MainWindow{
 		AssignTo: &mw,
-		Title:    "P3-34",
+		Title:    TitleName,
 		Icon:     appIcon,
 		Size:     Size{Width: 500, Height: 600},
 		Layout:   VBox{},
@@ -45,19 +48,25 @@ func GUI() {
 							LineEdit{
 								AssignTo: &inputCount,
 								MinSize:  Size{Width: 50, Height: 0},
-								Text:     "30",
+								Text:     strconv.Itoa(s.totalCycles),
 							},
-							Label{Text: "Длительность цикла (мин):"},
+							Label{Text: "Длительность:"},
 							LineEdit{
 								AssignTo: &inputLong,
 								MinSize:  Size{Width: 30, Height: 0},
-								Text:     "2",
+								Text:     strconv.Itoa(s.cycleMinutes),
 							},
 							Label{Text: "Частота:"},
 							LineEdit{
 								AssignTo: &inputFreq,
 								MinSize:  Size{Width: 50, Height: 0},
-								Text:     "2,2",
+								Text:     s.freq,
+							},
+							Label{Text: "Пороговое:"},
+							LineEdit{
+								AssignTo: &inputBorder,
+								MinSize:  Size{Width: 50, Height: 0},
+								Text:     s.borderNum,
 							},
 						},
 					},
@@ -113,7 +122,7 @@ func GUI() {
 							log.Print("КНОПКА: Начать измерение")
 
 							filesFolder = inputWay.Text()
-							freq := inputFreq.Text()
+							s.freq = inputFreq.Text()
 							D.Order = inputOrder.Text()
 							//log.Print("FREQ: ", freq)
 
@@ -131,21 +140,27 @@ func GUI() {
 								return
 							}
 
-							totalCycles, err := strconv.Atoi(inputCount.Text())
+							s.totalCycles, err = strconv.Atoi(inputCount.Text())
 							if err != nil {
 								log.Print(err)
 								return
 							}
 
 							D.Interval = inputLong.Text()
-							cycleMinutes, err := strconv.Atoi(D.Interval)
+							s.cycleMinutes, err = strconv.Atoi(D.Interval)
 							if err != nil {
 								log.Print(err)
 								return
 							}
 
+							borderStr := inputBorder.Text()
+							borderNum, err := strconv.ParseFloat(strings.ReplaceAll(borderStr, ",", "."), 32)
+							if err != nil {
+								log.Print("Error parsing borderStr: ", err)
+							}
+
 							if runner.testPingBt() {
-								runner.run(totalCycles, cycleMinutes, freq)
+								runner.run(s.totalCycles, s.cycleMinutes, s.freq, float32(borderNum))
 							}
 
 						},
@@ -285,15 +300,15 @@ func errGUI(inErr error) bool {
 					defer log.Print("Переподключиться: ", time.Since(start))
 					log.Print("КНОПКА: Переподключиться")
 
-					err := statusCon.SetText("Переподключаюсь")
+					err := statusCon.SetText("Переподключаюсь, перезапустите, если не поможет\r\n")
 					if err != nil {
 						log.Print(err)
 					}
 
-					err = statusCon.SetText(getPortsList())
-					if err != nil {
-						log.Print(err)
-					}
+					statusCon.AppendText(getPortsList())
+					//if err != nil {
+					//	log.Print(err)
+					//}
 
 					err = reconnectPort()
 					if err != nil {

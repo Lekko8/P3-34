@@ -140,7 +140,8 @@ func getSampleName(filename string) string {
 // Берём дату и время файла (из имени)
 func fileDateTime(filename string) time.Time {
 	layout := "20060102150405"
-	DateTime, err := time.Parse(layout, strings.Split(strings.Split(filename, "_")[2]+strings.Split(filename, "_")[3], ".")[0])
+	DateTime, err := time.Parse(layout, strings.Split(strings.Split(filename, "_")[2]+
+		strings.Split(filename, "_")[3], ".")[0])
 	if err != nil {
 		log.Println("Ошибка чтения даты и времени из имени файла: ", err)
 	}
