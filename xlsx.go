@@ -16,14 +16,14 @@ import (
 
 // Запускает процесс обработки данных и создания .xlsx
 func xlsx(filesFolder, orderName string) string {
-	capturedFiles, err := readFiles(filesFolder)
+	capturedFiles, err := readFiles(filesFolder) // собираем список файлов в []FileWData
 	if err != nil {
 		log.Print(err)
 		return err.Error()
 	}
 
 	for i := range capturedFiles {
-		readCSVData(filesFolder, &capturedFiles[i])
+		readCSVData(filesFolder, &capturedFiles[i]) // читаем данные из собранных файлов
 	}
 
 	results := calculateFiles(capturedFiles)
@@ -265,9 +265,9 @@ func createFile(listOfFiles []FileWData, results []FinalData, filesFolder, order
 		return err.Error()
 	}
 	err = f.SetCellValue("Результат", "A1", "Группа")
-	err = f.SetCellValue("Результат", "B1", "average value мкВт/см2")
+	err = f.SetCellValue("Результат", "B1", "average мкВт/см2")
 	err = f.SetCellValue("Результат", "D1", "Группа")
-	err = f.SetCellValue("Результат", "E1", "max value мкВт/см2")
+	err = f.SetCellValue("Результат", "E1", "max мкВт/см2")
 	//err = f.SetCellValue("Результат", "G1", order)
 	if err != nil {
 		log.Print(err)

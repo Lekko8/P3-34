@@ -37,7 +37,7 @@ func calculateFiles(capturedFiles []FileWData) []FinalData {
 	var calculatedFiles []FinalData
 
 	for _, file := range capturedFiles {
-		fileData, err := calculateData(file)
+		fileData, err := calculateDataSimple(file)
 		if err != nil {
 			log.Print(err)
 			continue
@@ -52,6 +52,26 @@ func calculateFiles(capturedFiles []FileWData) []FinalData {
 		}
 	}
 	return calculatedFiles
+}
+
+// Подсчёт данных для R, выводит просто все данные по всем образцам
+func calculateDataSimple(datafile FileWData) ([]FinalData, error) {
+	if len(datafile.data) == 0 {
+		return nil, errors.New("no data to calculate")
+	}
+
+	calculatedData := make([]FinalData, 0, len(datafile.data))
+
+	for _, data := range datafile.data {
+		calculatedData = append(calculatedData, FinalData{
+			datafile.sample,
+			data.avgValue,
+			data.maxValue,
+		})
+
+	}
+
+	return calculatedData, nil
 }
 
 // Подсчёт данных для R, выводит массив средних значений

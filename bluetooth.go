@@ -143,7 +143,7 @@ func openPort() error {
 	}
 
 	// Пробуем открыть сохраненный порт
-	if savedPort, err := readSavedPort(); err == nil && savedPort != "" {
+	if savedPort := readSavedPort(); savedPort != "" {
 		log.Printf("Trying saved port: %s", savedPort)
 		if p, err := tryOpenPort(savedPort); err == nil {
 			if isTargetDevice(p, savedPort) {
@@ -322,10 +322,10 @@ func scanPorts() error {
 //	return "", nil
 //}
 
-func readSavedPort() (string, error) {
+func readSavedPort() string {
 	f, err := os.Open(settingsFileName)
 	if err != nil {
-		return "", err
+		return ""
 	}
 	defer func() {
 		if err := f.Close(); err != nil {
@@ -336,10 +336,14 @@ func readSavedPort() (string, error) {
 	scanner := bufio.NewScanner(f)
 	scanner.Scan()
 	portName := strings.TrimSpace(scanner.Text())
-	if portName == "" {
-		return "", errors.New("empty port name")
-	}
-	return portName, nil
+
+	//portName = "COM3"
+	// TODO: исправить логику поиска порта, чтобы при неудаче не оставлять пустую строку, либо подумать ещё
+
+	//if portName == "" {
+	//	return "", errors.New("empty port name")
+	//}
+	return portName
 }
 
 // Сохраняет имя порта

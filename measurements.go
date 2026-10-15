@@ -25,6 +25,7 @@ func getMeas(fileSCV *os.File, borderNum float32) string {
 		log.Println("Parsing error: ", err)
 	}
 
+	// запрашиваем значения, пока полученное Avg не будет выше порога
 	for float32(tempAvg) < borderNum {
 		log.Println("tempAvg < borderNum:", tempAvg)
 

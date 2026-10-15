@@ -39,7 +39,7 @@ var (
 	filesFolder = fmt.Sprintf("C:\\Users\\%s\\Desktop\\p3-34\\P3-34 measurements\\%s",
 		getUserName(), time.Now().Format("02012006"))
 	fileLog   *os.File
-	TitleName = "P3-34 версия от 08.10.2026"
+	TitleName = "P3-34 версия от 15.10.2026"
 )
 
 //rsrc -manifest P3-34.manifest -o rsrc.syso
@@ -65,10 +65,10 @@ func main() {
 
 	// Гарантируем закрытие лог-файла при выходе
 	defer func() {
-		if err := fileLog.Close(); err != nil {
-			log.Printf("Ошибка закрытия лог-файла: %v", err)
-		}
 		log.Print("Закрыли(")
+		if fileLog != nil {
+			_ = fileLog.Close()
+		}
 	}()
 
 	// Гарантируем закрытие порта при выходе
@@ -88,7 +88,7 @@ func main() {
 			if err != nil {
 				log.Fatal(err)
 			}
-			fmt.Printf("%+v\n", *s)
+			log.Printf("%+v\n", *s)
 			GUI(s)
 		}
 	} else {
@@ -97,7 +97,7 @@ func main() {
 		if err != nil {
 			log.Fatal(err)
 		}
-		fmt.Printf("%+v\n", *s)
+		log.Printf("%+v\n", *s)
 		GUI(s)
 	}
 }
@@ -182,21 +182,31 @@ func (s *Settings) SaveSettings() error {
 }
 
 func logging() {
+	var writers []io.Writer
 
-	var err error
-
-	fileLogName := fmt.Sprintf("log/%s_P3-34.log", time.Now().Format("02.01.2006_15.04"))
-
-	fileLog, err = os.OpenFile(fileLogName, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
-	if err != nil {
-		log.Print("Не удалось открыть файл логов:", err)
-		return
+	if fi, err := os.Stdout.Stat(); err == nil && fi != nil {
+		writers = append(writers, os.Stdout)
 	}
 
-	_, _ = fileLog.Write([]byte{0xEF, 0xBB, 0xBF})
+	if st, err := os.Stat("log"); err == nil && st.IsDir() {
+		name := fmt.Sprintf("log/%s_P3-34.log", time.Now().Format("02.01.2006_15.04"))
+		f, err := os.OpenFile(name, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
+		if err == nil {
+			fileLog = f
+			if info, e := f.Stat(); e == nil && info.Size() == 0 {
+				_, _ = f.Write([]byte{0xEF, 0xBB, 0xBF}) // BOM только в новый файл
+			}
+			writers = append(writers, f)
+		}
+	}
 
-	multiWriter := io.MultiWriter(os.Stdout, fileLog)
-
-	log.SetOutput(multiWriter)
+	switch len(writers) {
+	case 0:
+		log.SetOutput(io.Discard)
+	case 1:
+		log.SetOutput(writers[0])
+	default:
+		log.SetOutput(io.MultiWriter(writers...))
+	}
 	log.Print("started logging")
 }
