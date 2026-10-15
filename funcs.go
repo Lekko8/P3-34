@@ -188,8 +188,12 @@ func (r *MeasRun) runLoop(freq string, borderNum float32) {
 func (r *MeasRun) doMeas(fileCSV *os.File, borderNum float32) error {
 	done := make(chan struct{})
 	var result string
+	var isValid = false
+
 	go func() {
-		result = r.meas(r.ctx, r.cycleMinutes, fileCSV, borderNum)
+		for !isValid {
+			result, isValid = r.meas(r.ctx, r.cycleMinutes, fileCSV, borderNum)
+		}
 
 		select {
 		case <-r.ctx.Done():
@@ -215,7 +219,7 @@ func (r *MeasRun) doMeas(fileCSV *os.File, borderNum float32) error {
 }
 
 // Запускает новый цикл измерений
-func (r *MeasRun) meas(ctx context.Context, m int, fileCSV *os.File, borderNum float32) string {
+func (r *MeasRun) meas(ctx context.Context, m int, fileCSV *os.File, borderNum float32) (string, bool) {
 	s := time.Duration(m) * time.Minute
 
 	ticker := time.NewTicker(500 * time.Millisecond)
@@ -226,7 +230,7 @@ func (r *MeasRun) meas(ctx context.Context, m int, fileCSV *os.File, borderNum f
 	for {
 		select {
 		case <-ctx.Done():
-			return "Измерение прервано"
+			return "Измерение прервано", false
 
 		case <-ticker.C:
 			elapsed := time.Since(start)

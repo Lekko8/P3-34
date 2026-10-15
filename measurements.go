@@ -10,7 +10,7 @@ import (
 )
 
 // Проводит измерение
-func getMeas(fileSCV *os.File, borderNum float32) string {
+func getMeas(fileSCV *os.File, borderNum float32) (string, bool) {
 
 	var (
 		result = strings.Builder{}
@@ -26,15 +26,10 @@ func getMeas(fileSCV *os.File, borderNum float32) string {
 	}
 
 	// запрашиваем значения, пока полученное Avg не будет выше порога
-	for float32(tempAvg) < borderNum {
+	if float32(tempAvg) < borderNum {
 		log.Println("tempAvg < borderNum:", tempAvg)
 
-		measAvr = convMeasData(get("MEAS:AVR"))
-
-		tempAvg, err = strconv.ParseFloat(strings.Split(measAvr, "±")[0], 32)
-		if err != nil {
-			log.Println("Parsing error: ", err)
-		}
+		return get("NEWMEAS"), false
 	}
 
 	ans = append(ans, measAvr)
@@ -54,7 +49,7 @@ func getMeas(fileSCV *os.File, borderNum float32) string {
 		result.WriteString(strings.TrimSuffix(res, "ready >>>"))
 	}
 
-	return result.String()
+	return result.String(), true
 }
 
 // Запрашивает информацию перед измерением и устанавливает частоту
