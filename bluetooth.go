@@ -129,7 +129,7 @@ func isTargetDevice(p serial.Port, portName string) bool {
 }
 
 // Открытие порта с поиском целевого устройства
-func openPort() error {
+func openPort(d *Data, s *Settings) error {
 	portMu.Lock()
 	defer portMu.Unlock()
 
@@ -143,24 +143,24 @@ func openPort() error {
 	}
 
 	// Пробуем открыть сохраненный порт
-	if savedPort := readSavedPort(); savedPort != "" {
-		log.Printf("Trying saved port: %s", savedPort)
-		if p, err := tryOpenPort(savedPort); err == nil {
-			if isTargetDevice(p, savedPort) {
+	if s.savedPort = readSavedPort(); s.savedPort != "COM" {
+		log.Printf("Trying saved port: %s", s.savedPort)
+		if p, err := tryOpenPort(s.savedPort); err == nil {
+			if isTargetDevice(p, s.savedPort) {
 				port = p
-				D.Port = savedPort
-				log.Printf("Successfully connected to saved port: %s", savedPort)
+				d.Port = s.savedPort
+				log.Printf("Successfully connected to saved port: %s", s.savedPort)
 				return nil
 			}
 			if err = p.Close(); err != nil {
 				log.Printf("Error closing saved port: %v", err)
 			}
-			log.Printf("Saved port %s is not target device", savedPort)
+			log.Printf("Saved port %s is not target device", s.savedPort)
 		}
 	}
 
 	// Сканируем все порты
-	return scanPorts()
+	return scanPorts(d)
 }
 
 // Пытается открыть конкретный порт
@@ -197,7 +197,7 @@ func tryOpenPort(portName string) (serial.Port, error) {
 }
 
 // Сканирует все доступные порты
-func scanPorts() error {
+func scanPorts(d *Data) error {
 	ports, err := serial.GetPortsList()
 	if err != nil {
 		return fmt.Errorf("getting ports list: %w", err)
@@ -286,7 +286,7 @@ func scanPorts() error {
 			return errors.New("target device not found")
 		}
 		port = result.p
-		D.Port = result.portName
+		d.Port = result.portName
 
 		// Сохраняем найденный порт
 		//if err := savePortName(result.portName); err != nil {
@@ -301,31 +301,11 @@ func scanPorts() error {
 	}
 }
 
-// Читает сохраненное имя порта
-//func readSavedPort() (string, error) {
-//
-//	if fileExists(settingsFileName) {
-//		log.Printf("Saved port not found")
-//		data, err := os.ReadFile(settingsFileName)
-//		if err != nil {
-//			return "", err
-//		}
-//
-//		portName := strings.TrimSpace(string(data))
-//		if portName == "" {
-//			return "", errors.New("empty port name")
-//		}
-//
-//		return portName, nil
-//	}
-//
-//	return "", nil
-//}
-
+// Открывает файл настроек и вычитывает только имя сохранённого порта
 func readSavedPort() string {
 	f, err := os.Open(settingsFileName)
 	if err != nil {
-		return ""
+		return "COM"
 	}
 	defer func() {
 		if err := f.Close(); err != nil {
@@ -338,18 +318,15 @@ func readSavedPort() string {
 	portName := strings.TrimSpace(scanner.Text())
 
 	//portName = "COM3"
-	// TODO: исправить логику поиска порта, чтобы при неудаче не оставлять пустую строку, либо подумать ещё
 
 	//if portName == "" {
 	//	return "", errors.New("empty port name")
 	//}
+
+	log.Printf("Reading saved port: %s", portName)
+
 	return portName
 }
-
-// Сохраняет имя порта
-//func savePortName(portName string) error {
-//	return os.WriteFile(portFile, []byte(portName), 0644)
-//}
 
 // Закрытие порта
 func closePort() error {
@@ -368,7 +345,7 @@ func closePort() error {
 }
 
 // Перезапуск порта
-func reconnectPort() error {
+func reconnectPort(d *Data, s *Settings) error {
 	log.Print("Starting port reconnection...")
 
 	// Закрываем текущий порт
@@ -380,12 +357,12 @@ func reconnectPort() error {
 	time.Sleep(1 * time.Second)
 
 	// Открываем порт заново
-	if err := openPort(); err != nil {
+	if err := openPort(d, s); err != nil {
 		log.Printf("Error opening port during reconnect: %v", err)
 		return err
 	}
 
-	log.Printf("Port reconnected successfully: %s", D.Port)
+	log.Printf("Port reconnected successfully: %s", d.Port)
 	return nil
 }
 

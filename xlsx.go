@@ -31,7 +31,7 @@ func xlsx(filesFolder, orderName string) string {
 }
 
 // Создаёт новый CSV
-func newCSV(sampleName string) (*os.File, error) {
+func newCSV(d *Data, sampleName string) (*os.File, error) {
 	fileName := fmt.Sprintf("P3_34_%s_%s.csv", time.Now().Format("20060102_150405"), sampleName)
 
 	folderPath := "P3-34 measurements/" + time.Now().Format("02012006")
@@ -55,15 +55,15 @@ func newCSV(sampleName string) (*os.File, error) {
 	s = append(s,
 		[]string{"P3-34 measurement"},
 		[]string{"Started at", time.Now().Format("2006-01-02"), time.Now().Format("15:04:05")},
-		[]string{"Port", D.Port},
-		[]string{"Interval min", D.Interval},
-		[]string{"Frequency", D.Frequency},
-		[]string{"Device ID", D.ID},
-		[]string{"Device Name", D.Name},
-		[]string{"Device Number", D.Number},
-		[]string{"Device Soft", D.Soft},
-		[]string{"Battery", D.Battery},
-		[]string{"Order", D.Order},
+		[]string{"Port", d.Port},
+		[]string{"Interval min", d.Interval},
+		[]string{"Frequency", d.Frequency},
+		[]string{"Device ID", d.ID},
+		[]string{"Device Name", d.Name},
+		[]string{"Device Number", d.Number},
+		[]string{"Device Soft", d.Soft},
+		[]string{"Battery", d.Battery},
+		[]string{"Order", d.Order},
 		[]string{"Sample", sampleName},
 		[]string{"Time", "Avg meas", "Avg err", "Max meas", "Max err"})
 

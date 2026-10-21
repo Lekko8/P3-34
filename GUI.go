@@ -10,7 +10,7 @@ import (
 	. "github.com/lxn/walk/declarative"
 )
 
-func GUI(s *Settings) {
+func GUI(s *Settings, d *Data, filesFolder string) {
 	var (
 		inputWay    *walk.LineEdit
 		inputCount  *walk.LineEdit
@@ -103,7 +103,7 @@ func GUI(s *Settings) {
 						Text:    "Проверить соединение",
 						MaxSize: Size{Width: 100, Height: 0},
 						OnClicked: func() {
-							connectGUI(mw, appIcon)
+							connectGUI(d, s, mw, appIcon)
 						},
 					},
 				},
@@ -123,7 +123,7 @@ func GUI(s *Settings) {
 
 							filesFolder = inputWay.Text()
 							s.freq = inputFreq.Text()
-							D.Order = inputOrder.Text()
+							d.Order = inputOrder.Text()
 							//log.Print("FREQ: ", freq)
 
 							statusMeas.AppendText("Начать измерение\r\n")
@@ -146,8 +146,8 @@ func GUI(s *Settings) {
 								return
 							}
 
-							D.Interval = inputLong.Text()
-							s.cycleMinutes, err = strconv.Atoi(D.Interval)
+							d.Interval = inputLong.Text()
+							s.cycleMinutes, err = strconv.Atoi(d.Interval)
 							if err != nil {
 								log.Print(err)
 								return
@@ -160,7 +160,7 @@ func GUI(s *Settings) {
 							}
 
 							if runner.testPingBt() {
-								runner.run(s.totalCycles, s.cycleMinutes, s.freq, float32(borderNum))
+								runner.run(d, s.totalCycles, s.cycleMinutes, s.freq, float32(borderNum))
 							}
 
 						},
@@ -221,7 +221,7 @@ func GUI(s *Settings) {
 
 }
 
-func connectGUI(owner walk.Form, appIcon *walk.Icon) {
+func connectGUI(d *Data, s *Settings, owner walk.Form, appIcon *walk.Icon) {
 	var (
 		dig           *walk.Dialog
 		statusConnect *walk.TextEdit
@@ -245,7 +245,7 @@ func connectGUI(owner walk.Form, appIcon *walk.Icon) {
 					defer log.Print("Повторить проверку: ", time.Since(start))
 					log.Print("КНОПКА: Повторить проверку")
 
-					err := reconnectPort()
+					err := reconnectPort(d, s)
 					if err != nil {
 						log.Print(err)
 					}
@@ -274,7 +274,7 @@ func connectGUI(owner walk.Form, appIcon *walk.Icon) {
 	dig.Run()
 }
 
-func errGUI(inErr error) bool {
+func errGUI(d *Data, s *Settings, inErr error) bool {
 	var (
 		statusCon *walk.TextEdit
 		//setPortButton   *walk.PushButton
@@ -310,7 +310,7 @@ func errGUI(inErr error) bool {
 					//	log.Print(err)
 					//}
 
-					err = reconnectPort()
+					err = reconnectPort(d, s)
 					if err != nil {
 						log.Print(err)
 					}

@@ -83,7 +83,7 @@ func (r *MeasRun) stop() {
 }
 
 // Запускает измерение
-func (r *MeasRun) run(totalCycles, cycleMinutes int, freq string, borderNum float32) {
+func (r *MeasRun) run(d *Data, totalCycles, cycleMinutes int, freq string, borderNum float32) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
@@ -114,11 +114,11 @@ func (r *MeasRun) run(totalCycles, cycleMinutes int, freq string, borderNum floa
 		r.progressBar.SetValue(0)
 	})
 
-	go r.runLoop(freq, borderNum)
+	go r.runLoop(d, freq, borderNum)
 }
 
 // Запускает цикл
-func (r *MeasRun) runLoop(freq string, borderNum float32) {
+func (r *MeasRun) runLoop(d *Data, freq string, borderNum float32) {
 	defer r.wg.Done()
 	defer func() {
 		r.mu.Lock()
@@ -134,9 +134,9 @@ func (r *MeasRun) runLoop(freq string, borderNum float32) {
 		})
 	}()
 
-	r.statusMeas.AppendText(getInfo(freq)) // получаем мета-данные прибора и устанавливаем частоту
+	r.statusMeas.AppendText(getInfo(d, freq)) // получаем мета-данные прибора и устанавливаем частоту
 
-	fileCSV, err := newCSV(r.inputName.Text())
+	fileCSV, err := newCSV(d, r.inputName.Text())
 	if err != nil {
 		log.Print("Не удалось создать CSV файл: ", err)
 	}

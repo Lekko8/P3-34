@@ -53,7 +53,7 @@ func getMeas(fileSCV *os.File, borderNum float32) (string, bool) {
 }
 
 // Запрашивает информацию перед измерением и устанавливает частоту
-func getInfo(freq string) string {
+func getInfo(d *Data, freq string) string {
 
 	var (
 		result = strings.Builder{}
@@ -73,15 +73,15 @@ func getInfo(freq string) string {
 
 	info := get("?")
 	infoSplit := strings.Split(info, "\r\n")
-	D.ID = strings.Split(infoSplit[1], " ")[1]
+	d.ID = strings.Split(infoSplit[1], " ")[1]
 	ans = append(ans, infoSplit[1])
-	D.Name = strings.Split(infoSplit[2], " ")[1]
+	d.Name = strings.Split(infoSplit[2], " ")[1]
 	ans = append(ans, infoSplit[2])
-	D.Number = strings.Split(infoSplit[3], " ")[1]
+	d.Number = strings.Split(infoSplit[3], " ")[1]
 	ans = append(ans, infoSplit[3])
-	D.Soft = strings.Split(infoSplit[4], " ")[1]
+	d.Soft = strings.Split(infoSplit[4], " ")[1]
 	ans = append(ans, infoSplit[4])
-	D.Battery = infoSplit[5]
+	d.Battery = infoSplit[5]
 	ans = append(ans, infoSplit[5])
 	/*
 		for i, t := range infoSplit {
@@ -107,11 +107,11 @@ func getInfo(freq string) string {
 			ans = append(ans, D.Battery)
 			log.Print("result.WriteString(get(\"UBATT\")) - ", D.Battery)
 	*/
-	D.Frequency = " "
+	d.Frequency = " "
 	log.Print("freq in meas func: ", freq)
 	if freq != "0" {
-		D.Frequency = freq
-		log.Printf("Кладу в D.Frequency: %v", D.Frequency)
+		d.Frequency = freq
+		log.Printf("Кладу в D.Frequency: %v", d.Frequency)
 		frequency := get("FREQ:" + strings.Replace(freq, ",", ".", 1))
 		ans = append(ans, strings.TrimSuffix(frequency, "ready >>>"))
 		log.Print("result.WriteString(get(\"FREQ\")) - ", frequency)

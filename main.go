@@ -13,19 +13,19 @@ import (
 )
 
 type Data struct {
-	Order     string
-	Port      string
-	Interval  string
-	Frequency string
-	ID        string
-	Name      string
-	Number    string
-	Soft      string
-	Battery   string
+	Order     string // номер заказа
+	Port      string // номер порта (COM<цифра>)
+	Interval  string // промежуток между измерениями
+	Frequency string // частота
+	ID        string // 26
+	Name      string // P3_34_UHF
+	Number    string // 54826
+	Soft      string // V2.0
+	Battery   string // заряд батареи
 }
 
 type Settings struct {
-	port         string
+	savedPort    string
 	totalCycles  int
 	cycleMinutes int
 	freq         string
@@ -34,36 +34,30 @@ type Settings struct {
 
 const settingsFileName = "settings.txt"
 
-var (
-	D           = &Data{}
-	filesFolder = fmt.Sprintf("C:\\Users\\%s\\Desktop\\p3-34\\P3-34 measurements\\%s",
-		getUserName(), time.Now().Format("02012006"))
-	fileLog   *os.File
-	TitleName = "P3-34 версия от 15.10.2026"
-)
+var TitleName = "P3-34 версия от 21.10.2026"
 
 //rsrc -manifest P3-34.manifest -o rsrc.syso
 //rsrc -ico icon.ico -manifest P3-34.manifest -o rsrc_windows_amd64.syso
 
 func main() {
-	s := &Settings{
-		port:         D.Port,
-		totalCycles:  30,
-		cycleMinutes: 2,
-		freq:         "2,2",
-		borderNum:    "0,5",
-	}
-	defer func() {
-		if err := s.SaveSettings(); err != nil {
-			log.Print(err)
+
+	var (
+		d = &Data{}
+		s = &Settings{
+			savedPort:    "COM",
+			totalCycles:  30,
+			cycleMinutes: 2,
+			freq:         "2,2",
+			borderNum:    "0,5",
 		}
-	}()
+		fileLog     *os.File
+		filesFolder = fmt.Sprintf(
+			"C:\\Users\\%s\\Desktop\\p3-34\\P3-34 measurements\\%s",
+			getUserName(), time.Now().Format("02012006"))
+	)
 
-	logging() // если нет папки log у файла при запуске, то логи не будут выписываться
+	logging(fileLog) // если нет папки log у файла при запуске, то логи не будут выписываться
 
-	log.Print("Открыли)")
-
-	// Гарантируем закрытие лог-файла при выходе
 	defer func() {
 		log.Print("Закрыли(")
 		if fileLog != nil {
@@ -71,35 +65,41 @@ func main() {
 		}
 	}()
 
-	// Гарантируем закрытие порта при выходе
 	defer func() {
 		if err := closePort(); err != nil {
 			log.Printf("Ошибка закрытия порта: %v", err)
 		}
 	}()
 
+	defer func() {
+		if err := s.SaveSettings(); err != nil {
+			log.Print(err)
+		}
+	}()
+
+	log.Print("Открыли)")
+
 	// Открываем порт
-	err := openPort()
+	err := openPort(d, s)
 
 	if err != nil {
 		log.Printf("Ошибка открытия порта: %v", err)
-		if errGUI(err) {
-			err := s.LoadSettings()
-			if err != nil {
-				log.Fatal(err)
-			}
-			log.Printf("%+v\n", *s)
-			GUI(s)
+		if errGUI(d, s, err) {
+			initGUI(s, d, filesFolder)
 		}
 	} else {
-		log.Printf("Порт успешно открыт: %s", D.Port)
-		err := s.LoadSettings()
-		if err != nil {
-			log.Fatal(err)
-		}
-		log.Printf("%+v\n", *s)
-		GUI(s)
+		log.Printf("Порт успешно открыт: %s", d.Port)
+		initGUI(s, d, filesFolder)
 	}
+}
+
+func initGUI(s *Settings, d *Data, filesFolder string) {
+	err := s.LoadSettings(d)
+	if err != nil {
+		log.Fatal(err)
+	}
+	log.Printf("%+v\n", *s)
+	GUI(s, d, filesFolder)
 }
 
 func getUserName() string {
@@ -111,21 +111,14 @@ func getUserName() string {
 	return strings.Split(corUser.Username, "\\")[1]
 }
 
-func (s *Settings) LoadSettings() error {
+func (s *Settings) LoadSettings(d *Data) error {
 	log.Println("Loading settings")
-	if _, err := os.Stat(settingsFileName); os.IsNotExist(err) {
-		//s := &Settings{
-		//	port:         D.Port,
-		//	totalCycles:  30,
-		//	cycleMinutes: 2,
-		//	freq:         "2,2",
-		//	borderNum:    "0,5",
-		//}
-		if err := s.SaveSettings(); err != nil {
-			return err
-		}
-		return nil
-	}
+	//if _, err := os.Stat(settingsFileName); os.IsNotExist(err) {
+	//	if err := s.SaveSettings(d); err != nil {
+	//		return err
+	//	}
+	//	return nil
+	//}
 
 	f, err := os.Open(settingsFileName)
 	if err != nil {
@@ -152,7 +145,7 @@ func (s *Settings) LoadSettings() error {
 		return fmt.Errorf("settings.txt: expected 5 lines, got %d", len(lines))
 	}
 
-	s.port = lines[0]
+	d.Port = lines[0]
 	s.freq = lines[3]
 	s.borderNum = lines[4]
 
@@ -177,11 +170,11 @@ func (s *Settings) SaveSettings() error {
 	}()
 
 	_, err = fmt.Fprintf(f, "%s\n%d\n%d\n%s\n%s\n",
-		D.Port, s.totalCycles, s.cycleMinutes, s.freq, s.borderNum)
+		s.savedPort, s.totalCycles, s.cycleMinutes, s.freq, s.borderNum)
 	return err
 }
 
-func logging() {
+func logging(fileLog *os.File) {
 	var writers []io.Writer
 
 	if fi, err := os.Stdout.Stat(); err == nil && fi != nil {
