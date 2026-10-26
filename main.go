@@ -34,7 +34,7 @@ type Settings struct {
 
 const settingsFileName = "settings.txt"
 
-var TitleName = "P3-34 версия от 21.10.2026"
+var TitleName = "P3-34 версия от 22.10.2026"
 
 //rsrc -manifest P3-34.manifest -o rsrc.syso
 //rsrc -ico icon.ico -manifest P3-34.manifest -o rsrc_windows_amd64.syso

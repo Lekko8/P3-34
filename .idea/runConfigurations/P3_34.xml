@@ -1,8 +1,8 @@
 <component name="ProjectRunConfigurationManager">
-  <configuration default="false" name="P3-34" type="GoApplicationRunConfiguration" factoryName="Go Application">
+  <configuration default="false" name="P3_34" type="GoApplicationRunConfiguration" factoryName="Go Application">
     <module name="P3-34" />
     <working_directory value="$PROJECT_DIR$/bin" />
-    <go_parameters value="-buildmode=exe -ldflags=&quot;-s -w -H windowsgui&quot; -o ./bin/P3-34.exe" />
+    <go_parameters value="-buildmode=exe -ldflags=&quot;-s -w -H windowsgui&quot; -o ./bin/P3_34.exe" />
     <kind value="PACKAGE" />
     <package value="P3-34" />
     <directory value="$PROJECT_DIR$" />

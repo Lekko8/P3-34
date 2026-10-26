@@ -322,9 +322,9 @@ func errGUI(d *Data, s *Settings, inErr error) bool {
 			},
 			PushButton{
 				AssignTo: &doneButton,
-				Text:     "Должно работать",
+				Text:     "Продолжить без подключения",
 				OnClicked: func() {
-					log.Print("КНОПКА: Должно работать")
+					log.Print("КНОПКА: Продолжить без подключения")
 					mainGUI = true
 					dlg.Cancel()
 				},
@@ -335,7 +335,8 @@ func errGUI(d *Data, s *Settings, inErr error) bool {
 				ReadOnly: true,
 				VScroll:  true,
 				Text: "Ошибка подключения к Bluetooth: " + inErr.Error() + "\r\nПроверьте, " +
-					"в настройках должно быть написано P3-34 подключён",
+					"в настройках Bluetooth должно быть написано P3-34 подключён.\r\n" +
+					"Возможно P3-34 подключён к другому устройству.",
 			},
 		},
 	}.Run(nil)
